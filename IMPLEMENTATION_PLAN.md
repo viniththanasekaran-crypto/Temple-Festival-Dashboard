@@ -1,0 +1,710 @@
+# Temple App — Implementation Plan
+
+> Phases are executed in order. Each phase has a clear deliverable before moving to the next.
+> **Cycle per phase:** Build → Manual verify → Write tests → Tests pass → Next phase
+
+---
+
+## Phase 0 — Project Scaffold
+
+> Goal: Folder structure only. No logic. Just the skeleton.
+
+### Frontend (`/frontend`)
+```
+frontend/
+  src/
+    api/            ← axios instance + API call functions
+    assets/         ← images, icons
+    components/     ← shared/reusable UI components
+    hooks/          ← custom react hooks
+    pages/
+      auth/         ← login page
+      dashboard/    ← dashboard page
+      festivals/    ← festivals list + detail
+      families/     ← families list + detail
+      reports/      ← reports page
+      reminders/    ← SMS reminders page
+      temple/       ← temple profile page
+      users/        ← users page (super_admin)
+      temples/      ← temples list page (super_admin)
+    routes/         ← route definitions + protected route wrapper
+    types/          ← shared TypeScript types/interfaces
+    utils/          ← helper functions
+    App.tsx
+    main.tsx
+```
+
+### Backend (`/backend`)
+```
+backend/
+  src/
+    controllers/    ← route handler functions
+    middlewares/    ← auth, role check, temple_id guard
+    routes/         ← express route definitions
+    services/       ← business logic
+    validators/     ← zod schemas per resource
+    utils/          ← helpers (bcrypt, jwt, password gen)
+    lib/            ← prisma client, cloudinary, msg91, razorpay init
+    app.ts          ← express app setup
+    server.ts       ← entry point
+  prisma/
+    schema.prisma
+```
+
+### Tasks
+- [ ] Initialize frontend (Vite + React + TypeScript)
+- [ ] Initialize backend (Node + Express + TypeScript)
+- [ ] Create all folders above (empty with .gitkeep)
+- [ ] Install all dependencies (frontend + backend)
+- [ ] Setup docker-compose.yml for PostgreSQL (dev DB + test DB on separate ports)
+- [ ] Initialize Prisma
+- [ ] Setup Jest + Supertest (backend)
+- [ ] Setup Vitest + React Testing Library (frontend)
+- [ ] Setup ESLint + Prettier (frontend + backend)
+- [ ] Setup Husky pre-push hook (lint + format + test)
+- [ ] Initialize GitHub repository
+- [ ] Create branches: `dev`, `uat`, `staging`, `prod`
+- [ ] Setup GitHub Actions workflows:
+  - `ci.yml` — lint + format + test on every push
+  - `deploy-dev.yml` — auto deploy on merge to dev
+  - `deploy-uat.yml` — auto deploy on merge to uat
+  - `deploy-prod.yml` — manual approval → deploy to prod
+- [ ] Setup branch protection rules on GitHub:
+  - `dev` → CI must pass
+  - `uat` → CI pass + 1 reviewer
+  - `staging` → CI pass + 1 reviewer
+  - `prod` → CI pass + manual approval
+- [ ] Verify both dev servers start without errors
+
+### Deliverable
+Both frontend and backend boot. Folder structure in place. Test frameworks, linting, formatting, Husky hooks, and GitHub Actions all configured. No app logic yet.
+
+---
+
+## Phase 1 — Foundation (Auth + DB Schema)
+
+> Goal: DB schema defined. Login working end to end for all roles.
+
+### Database Schema (Prisma)
+- [ ] `User` — id, name, phone (+91 format), password (hashed), role, temple_id, family_id, status, failed_attempts, locked_until, createdAt
+- [ ] `RefreshToken` — id, user_id, token_hash, expires_at, createdAt
+- [ ] `District` — id, name (seeded with all 38 Tamil Nadu districts)
+- [ ] `Temple` — id, name, deity, village, district, address, estYear, phone, description, coverPhoto, createdAt
+- [ ] `TempleGallery` — id, temple_id, imageUrl, publicId, createdAt
+- [ ] `Festival` — id, temple_id, name, description, startDate, endDate, deadline, fixedAmount, status, createdAt
+- [ ] `FestivalAgenda` — id, festival_id, date, agenda
+- [ ] `Family` — id, temple_id, headName, motherName, children[{name, age}], primaryPhone (+91), secondaryPhone, photoUrl, createdAt
+- [ ] `Payment` — id, temple_id, festival_id, family_id, amount, mode, type, razorpayId, recordedBy, createdAt
+- [ ] `PaymentAuditLog` — id, payment_id, changedBy, oldAmount, newAmount, changedAt
+- [ ] `SmsLog` — id, temple_id, festival_id, type, sentTo, count, status, scheduledAt, sentAt, createdAt
+
+### Backend
+- [ ] Prisma schema + first migration
+- [ ] bcrypt utility (hash + compare)
+- [ ] JWT utility — access token (15 min) + refresh token (7 days), both signed with separate secrets
+- [ ] Random password generator utility
+- [ ] Global error handler middleware — `{ success, message, errors }` on all failures
+- [ ] Swagger setup — `swagger-ui-express` + `swagger-jsdoc` at `/api/docs`
+- [ ] Morgan — HTTP request logging setup
+- [ ] Winston — app logging setup (error + info levels)
+- [ ] Helmet.js — HTTP security headers
+- [ ] CORS — whitelist allowed origins per environment
+- [ ] Rate limiting — auth routes (5 req/min) + API routes (100 req/min)
+- [ ] Account lockout — lock after 5 failed login attempts (15 min cooldown)
+- [ ] API versioning — all routes under `/api/v1/`
+- [ ] `POST /api/v1/auth/login` — phone + password → access + refresh JWT cookies
+- [ ] `POST /api/v1/auth/otp/send` — phone → MSG91 OTP
+- [ ] `POST /api/v1/auth/otp/verify` — phone + otp → JWT cookies
+- [ ] `POST /api/v1/auth/refresh` — refresh token → new access token
+- [ ] `POST /api/v1/auth/logout` — clear both cookies
+- [ ] `GET /api/v1/auth/me` — return current user from JWT
+- [ ] `POST /api/v1/auth/forgot-password` — send OTP to phone
+- [ ] `POST /api/v1/auth/reset-password` — verify OTP → set new password
+- [ ] `PUT /api/v1/auth/change-password` — logged-in user changes own password
+- [ ] Auth middleware — verify access token, auto-refresh if expired
+- [ ] Role middleware — check role (super_admin / admin / viewer)
+- [ ] Temple guard middleware — attach temple_id to all requests
+- [ ] `.env.example` file with all required keys
+- [ ] Zod validators for all auth routes
+
+### Frontend
+- [ ] Axios instance (base URL + withCredentials)
+- [ ] TanStack Query provider setup
+- [ ] React Router setup
+- [ ] react-i18next setup (English + Tamil)
+- [ ] Language switcher component in navbar
+- [ ] Translation files: `en.json` + `ta.json`
+- [ ] Login page
+  - Tab 1: Phone + Password form
+  - Tab 2: Phone + OTP form (send OTP, 60s resend timer, verify)
+  - Inline error messages
+  - Loading states on buttons
+- [ ] `useAuth` hook — current user, login, logout
+- [ ] Protected route wrapper — redirect to /login if not authenticated
+- [ ] Role-based redirect after login:
+  - super_admin → `/temples`
+  - admin → `/dashboard`
+  - viewer → `/dashboard`
+- [ ] Navbar shell (empty links, just structure)
+
+### Testing (after build)
+**Backend (Jest + Supertest)**
+- [ ] Unit: bcrypt hash + compare
+- [ ] Unit: JWT sign + verify (access + refresh)
+- [ ] Unit: Zod validators (valid + invalid inputs)
+- [ ] Integration: `POST /auth/login` — correct credentials → JWT cookies set
+- [ ] Integration: `POST /auth/login` — wrong password → 401
+- [ ] Integration: `POST /auth/login` — 5 failed attempts → account locked
+- [ ] Integration: `POST /auth/otp/send` — MSG91 mocked → success
+- [ ] Integration: `POST /auth/otp/verify` — correct OTP → JWT cookies set
+- [ ] Integration: `POST /auth/forgot-password` → OTP sent (MSG91 mocked)
+- [ ] Integration: `POST /auth/reset-password` → password updated
+- [ ] Integration: `POST /auth/refresh` — valid refresh token → new access token
+- [ ] Integration: protected route without JWT → 401
+- [ ] Integration: wrong role on protected route → 403
+- [ ] Integration: rate limit — 6th auth request in 1 min → 429
+
+**Frontend (Vitest + RTL)**
+- [ ] Login form: shows OTP input after Send OTP clicked
+- [ ] Login form: resend timer counts down 60s
+- [ ] Login form: shows error on wrong password
+- [ ] Protected route: redirects unauthenticated user to /login
+- [ ] Role redirect: admin → /dashboard, super_admin → /temples
+- [ ] Forgot password flow: OTP sent → enter OTP → new password set
+
+### Deliverable
+Login works for all roles. JWT issued. Role-based redirect. Protected routes enforced. All security middleware active. All tests passing.
+
+---
+
+## Phase 2 — Super Admin (Temples + Users)
+
+> Goal: super_admin can create temples and assign admin accounts.
+
+### Backend
+- [ ] `GET /temples` — list all temples (super_admin)
+- [ ] `POST /temples` — create temple
+- [ ] `PUT /temples/:id` — edit temple
+- [ ] `DELETE /temples/:id` — delete if no festivals/families
+- [ ] `GET /users` — list admin users (super_admin)
+- [ ] `POST /users` — create admin (hash password + SMS credentials via MSG91)
+- [ ] `PUT /users/:id` — edit admin
+- [ ] `PUT /users/:id/deactivate` — deactivate admin
+- [ ] Zod validators for temple + user routes
+
+### Frontend
+- [ ] Temples list page (`/temples`)
+  - Card grid (cover photo placeholder + name + deity + village + district)
+  - Search by name / village / district
+  - [+ Add Temple] button → modal
+  - [Edit] [Delete] per card
+  - Pagination
+- [ ] Add/Edit Temple modal
+- [ ] Users page (`/users`)
+  - Table: name | phone | temple | status | actions
+  - Search + filter by temple
+  - [+ Add Admin] button → modal
+  - [Edit] [Deactivate] per row
+  - Pagination
+- [ ] Add/Edit Admin modal
+
+### Testing (after build)
+**Backend (Jest + Supertest)**
+- [ ] Integration: `POST /temples` — creates temple, returns correct fields
+- [ ] Integration: `DELETE /temples/:id` — blocked if festivals/families exist
+- [ ] Integration: `POST /users` — creates admin, password hashed, SMS mocked
+- [ ] Integration: `PUT /users/:id/deactivate` — user status updated
+- [ ] Integration: non-super_admin accessing `/temples` → 403
+
+**Frontend (Vitest + RTL)**
+- [ ] Temple card renders name, deity, village
+- [ ] Add Temple modal — submit with missing required field → shows error
+- [ ] Add Admin modal — submit creates admin, modal closes
+
+### Deliverable
+super_admin can create temples and admin accounts. Admin receives SMS with credentials and can log in. All tests passing.
+
+---
+
+## Phase 3 — Festivals
+
+> Goal: Admin can create and manage festivals with day-wise agenda.
+
+### Backend
+- [ ] `GET /festivals` — list all (filter by status: active / past)
+- [ ] `POST /festivals` — create + auto-generate FestivalAgenda rows by date range
+- [ ] `PUT /festivals/:id` — edit + update agenda rows
+- [ ] `DELETE /festivals/:id` — delete if no payments
+- [ ] `GET /festivals/:id` — detail + agenda rows
+- [ ] `GET /festivals/:id/payments` — all family payments for festival (admin)
+- [ ] `GET /festivals/:id/my-payments` — logged-in family's payments (viewer)
+- [ ] Zod validators for festival routes
+
+### Frontend
+- [ ] Festivals list page (`/festivals`)
+  - Active festivals section (top)
+  - Past festivals section (below)
+  - [+ New Festival] button → modal
+  - [Edit] [Delete] per row (admin only)
+- [ ] Add/Edit Festival modal
+  - Name, description, start date, end date, deadline, fixed amount, status
+  - Day-wise agenda rows (auto-generated between start + end date)
+- [ ] Festival Detail page (`/festivals/:id`)
+  - Top: festival info + agenda table (read-only, all roles)
+  - Admin below: all families + paid/pending per family + [Record Payment] [Send Reminder]
+  - Viewer below: own family payment status only
+
+### Testing (after build)
+**Backend (Jest + Supertest)**
+- [ ] Integration: `POST /festivals` — agenda rows auto-generated for each date in range
+- [ ] Integration: `DELETE /festivals/:id` — blocked if payments exist
+- [ ] Integration: `GET /festivals/:id/my-payments` — viewer sees only own family payments
+- [ ] Integration: viewer accessing admin-only festival data → 403
+
+**Frontend (Vitest + RTL)**
+- [ ] Festival modal: agenda rows appear dynamically when start + end date selected
+- [ ] Festival detail: admin sees all families, viewer sees only own payment
+
+### Deliverable
+Admin can create festivals with agenda. Festival detail visible correctly per role. All tests passing.
+
+---
+
+## Phase 4 — Families & Viewer Accounts
+
+> Goal: Admin manages families. Family members get auto-created accounts and can log in.
+
+### Backend
+- [ ] `GET /families` — all families (admin) / own family only (viewer)
+- [ ] `POST /families` — create family + auto-create viewer User (if new phone) + SMS credentials
+- [ ] `PUT /families/:id` — admin edits all fields
+- [ ] `PUT /families/:id/children` — viewer edits children only
+- [ ] `DELETE /families/:id` — delete if no payments
+- [ ] `PUT /families/:id/photo` — upload to Cloudinary, update photoUrl
+- [ ] `POST /families/import` — parse uploaded Excel, bulk create families, return row-level error report
+- [ ] `GET /families/import/template` — stream blank Excel template download
+- [ ] Cloudinary SDK integration
+- [ ] Zod validators for family routes
+
+### Frontend
+- [ ] Families list page (`/families`)
+  - Admin: card grid (all families), search, paginate, [+ Add Family], [Import Excel], [Download Template]
+  - Viewer: only own family card + [Upload Photo]
+- [ ] Add/Edit Family modal (admin)
+  - Head name, mother name, children[{name, age}], primary phone (+91), secondary phone
+- [ ] Family Detail page (`/families/:id`)
+  - Admin: full profile + [Edit] + payment history across festivals
+  - Viewer: own profile + [Upload Photo] + [Edit Children] + payment history
+- [ ] Excel import modal — upload file, show progress, show row-level error report
+- [ ] Initials avatar (fallback when no photo)
+- [ ] Cloudinary upload widget for profile photo
+
+### Testing (after build)
+**Backend (Jest + Supertest)**
+- [ ] Integration: `POST /families` — new phone → viewer user created, SMS mocked
+- [ ] Integration: `POST /families` — existing phone → no new user created, no SMS
+- [ ] Integration: `DELETE /families/:id` — blocked if payments exist
+- [ ] Integration: viewer `PUT /families/:id` — cannot edit phone or name → 403
+- [ ] Integration: viewer `PUT /families/:id/children` — children updated correctly
+- [ ] Integration: cross-temple family access → 403
+
+**Frontend (Vitest + RTL)**
+- [ ] Family card renders initials avatar when no photo
+- [ ] Admin sees all family cards, viewer sees only own
+- [ ] Add Family modal — submit with missing primary phone → shows error
+
+### Deliverable
+Admin adds families. Viewer account auto-created, SMS sent. Family member logs in, sees own profile and payment history. All tests passing.
+
+---
+
+## Phase 5 — Payments
+
+> Goal: Admin records cash payments. Razorpay handles online payments.
+
+### Backend
+- [ ] `POST /payments` — record manual cash payment
+- [ ] `PUT /payments/:id` — admin edits cash payment amount only (logs to PaymentAuditLog)
+- [ ] `GET /payments?familyId=&festivalId=` — payment history
+- [ ] `GET /payments/:id/receipt` — generate PDF receipt
+- [ ] `POST /payments/:id/receipt/whatsapp` — send receipt PDF to family WhatsApp via MSG91
+- [ ] Pending calculation service: `(fixedAmount × totalFamilies) − SUM(regular payments)`
+- [ ] `POST /payments/order` — create Razorpay order
+- [ ] `POST /payments/webhook` — Razorpay webhook, verify signature, idempotency check, auto-record payment + send WhatsApp confirmation
+- [ ] `POST /payments/link` — generate + send Razorpay payment link via MSG91 SMS
+- [ ] Zod validators for payment routes
+
+### Frontend
+- [ ] Record Payment modal (accessible from Family Detail + Festival Detail)
+  - Select festival, amount, mode (cash/upi/card/netbanking/wallet), type (regular/extra)
+- [ ] Edit Payment modal (cash only) — admin edits amount, audit log entry created
+- [ ] Payment history table (family detail + festival detail pages)
+- [ ] Pending amount display on festival summary cards + family rows
+- [ ] [Download Receipt] button — admin + family
+- [ ] [Send Receipt via WhatsApp] button — admin + family
+- [ ] [Send Payment Link] button → triggers Razorpay link via SMS
+
+### Testing (after build)
+**Backend (Jest + Supertest)**
+- [ ] Unit: pending calculation — correct result for partial + full + zero payments
+- [ ] Integration: `POST /payments` — cash payment recorded, pending updated
+- [ ] Integration: `POST /payments/webhook` — valid Razorpay signature → payment recorded
+- [ ] Integration: `POST /payments/webhook` — invalid signature → 400 rejected
+- [ ] Integration: extra payment type does not affect pending calculation
+
+**Frontend (Vitest + RTL)**
+- [ ] Payment modal: all mode options render (cash/upi/card/netbanking/wallet)
+- [ ] Pending amount updates after payment recorded
+
+### Deliverable
+Admin records cash payments. Razorpay webhook auto-records online payments (with idempotency). Pending amounts calculated correctly everywhere. All tests passing.
+
+---
+
+## Phase 6 — Dashboard
+
+> Goal: Admin and viewer land on a meaningful dashboard after login.
+
+### Backend
+- [ ] `GET /dashboard` — active festivals with summary stats (total families, collected, pending)
+- [ ] `GET /festivals?status=past&page=1` — past festivals paginated for history
+
+### Frontend
+- [ ] Dashboard page (`/dashboard`)
+  - Admin view:
+    - Ongoing festival cards (name, dates, total families, collected ₹, pending ₹)
+    - Quick actions per card: [View Families] [Send Reminders] [Report]
+    - Empty state if no active festival
+    - Quick nav: Festivals | Families | Reports | SMS Reminders
+    - Past festivals history table (paginated)
+  - Viewer view:
+    - Active festival(s) with own payment status (paid ₹ / pending ₹)
+    - [View Details] per festival
+    - Past festivals with own payment history
+- [ ] Viewer navbar: My Festival | My Family | Logout
+- [ ] Admin navbar: Dashboard | Festivals | Families | Reports | Reminders | Logout
+
+### Testing (after build)
+**Backend (Jest + Supertest)**
+- [ ] Integration: `GET /dashboard` — returns only active festivals for that temple
+- [ ] Integration: stats correct — collected + pending match payment records
+
+**Frontend (Vitest + RTL)**
+- [ ] Admin dashboard: shows festival card with correct stats
+- [ ] Admin dashboard: shows empty state when no active festival
+- [ ] Viewer dashboard: shows own payment status only
+- [ ] Viewer navbar: only My Festival + My Family links visible
+
+### Deliverable
+Both admin and viewer see relevant data on dashboard. Navigation fully wired. All tests passing.
+
+---
+
+## Phase 7 — SMS Reminders
+
+> Goal: Admin sends and schedules SMS via MSG91.
+
+### Backend
+- [ ] MSG91 SMS service (OTP, credentials, bulk payment reminders — retry up to 3 times on failure)
+- [ ] MSG91 WhatsApp service (festival greetings, day-wise details, payment confirmations)
+- [ ] Payment confirmation WhatsApp message on successful payment (cash + Razorpay)
+- [ ] `POST /reminders/payment` — payment reminder SMS to pending families
+- [ ] `POST /reminders/greeting` — welcome greeting SMS to all families
+- [ ] `POST /reminders/agenda` — day-wise festival details SMS
+- [ ] `POST /reminders/schedule` — schedule SMS via node-cron
+- [ ] `DELETE /reminders/schedule/:id` — cancel scheduled SMS
+- [ ] `GET /reminders/history` — SMS send log per temple
+- [ ] SmsLog DB writes on every send
+
+### Frontend
+- [ ] SMS Reminders page (`/reminders`)
+  - Tab 1: Payment Reminders
+    - Select festival
+    - Family list with pending amounts + checkboxes
+    - [Send Selected] [Send All]
+  - Tab 2: Welcome Greeting
+    - Select festival
+    - Message preview
+    - [Send Now] [Schedule → N days before start]
+  - Tab 3: Festival Day Details
+    - Select festival
+    - Day-wise agenda preview
+    - [Send All Days Now] [Schedule → N days before start]
+  - SMS history log below each tab (date | type | count | status)
+
+### Testing (after build)
+**Backend (Jest + Supertest)**
+- [ ] Integration: `POST /reminders/payment` — only families with pending > 0 receive SMS (MSG91 mocked)
+- [ ] Integration: `POST /reminders/schedule` — cron job created, SmsLog entry created
+- [ ] Integration: `DELETE /reminders/schedule/:id` — cron cancelled
+- [ ] Integration: SmsLog written correctly after every send
+
+**Frontend (Vitest + RTL)**
+- [ ] Payment reminders tab: only pending families shown in list
+- [ ] Schedule input: appears when [Schedule] clicked
+
+### Deliverable
+Admin sends all SMS types. Scheduled SMS fires automatically via cron. All tests passing.
+
+---
+
+## Phase 8 — Reports
+
+> Goal: Admin downloads Excel and PDF reports.
+
+### Backend
+- [ ] `GET /reports/festival/:id` — festival report data (all families + payments)
+- [ ] `GET /reports/family/:id?from=&to=` — family payment history with date filter
+- [ ] `GET /reports/festival/:id/excel` — ExcelJS stream download
+- [ ] `GET /reports/family/:id/excel` — ExcelJS stream with date filter
+
+### Frontend
+- [ ] Reports page (`/reports`) — admin only
+  - Tab 1: Festival Report
+    - Select festival dropdown
+    - Preview table: family | fixed amt | paid | pending | mode
+    - [Download Excel] [Download PDF]
+  - Tab 2: Family Report
+    - Search + select family
+    - From date → To date filter
+    - Preview table: festival | fixed amt | paid | pending | date
+    - [Download Excel] [Download PDF]
+- [ ] react-pdf simple table layout for PDF generation
+
+### Testing (after build)
+**Backend (Jest + Supertest)**
+- [ ] Integration: `GET /reports/festival/:id` — returns all families with correct payment totals
+- [ ] Integration: `GET /reports/family/:id?from=&to=` — date filter returns correct range
+- [ ] Integration: `GET /reports/festival/:id/excel` — response is valid Excel file (check content-type)
+
+**Frontend (Vitest + RTL)**
+- [ ] Festival report tab: shows preview table after festival selected
+- [ ] Family report tab: date pickers appear and filter results
+
+### Deliverable
+Admin downloads festival and family reports in Excel and PDF. All tests passing.
+
+---
+
+## Phase 9 — Temple Profile & Images
+
+> Goal: Temple cover photo, gallery, profile pictures fully working.
+
+### Backend
+- [ ] `GET /temple` — get temple profile (scoped to temple_id)
+- [ ] `PUT /temple` — update temple details
+- [ ] `POST /temple/cover` — upload cover photo to Cloudinary
+- [ ] `POST /temple/gallery` — upload gallery image (max 20, 5MB each, validated)
+- [ ] `DELETE /temple/gallery/:imageId` — delete gallery image from Cloudinary + DB
+- [ ] File size validation middleware (5MB max)
+
+### Frontend
+- [ ] Temple Profile page (`/temple`)
+  - Cover photo (full width hero) + [Change Cover] (admin/super_admin)
+  - Temple name, deity, village, district, address, est. year, contact, description
+  - [Edit Details] (admin/super_admin)
+  - Gallery grid (up to 20 images)
+  - [Upload Images] [Delete Image] (admin/super_admin)
+  - Viewer sees read-only
+- [ ] Cloudinary upload widget for cover + gallery
+- [ ] Image size error handling (>5MB rejected with clear message)
+
+### Testing (after build)
+**Backend (Jest + Supertest)**
+- [ ] Integration: `POST /temple/gallery` — blocked if already 20 images
+- [ ] Integration: `POST /temple/gallery` — file > 5MB rejected with clear error
+- [ ] Integration: `DELETE /temple/gallery/:imageId` — removed from DB + Cloudinary mocked
+
+**Frontend (Vitest + RTL)**
+- [ ] Gallery: upload button disabled when 20 images reached
+- [ ] Image > 5MB: shows error message before upload
+
+### Deliverable
+Temple profile fully functional with cover + gallery images. All tests passing.
+
+---
+
+## Phase 10 — Polish & Production Readiness
+
+> Goal: UI complete, edge cases handled, app ready for real use.
+
+### Tasks
+- [ ] Loading states on all data fetches
+- [ ] Error states on all API failures
+- [ ] Empty states on all list pages
+- [ ] Mobile responsiveness (all pages)
+- [ ] Form validations — inline errors everywhere
+- [ ] Toast notifications (success/error on all actions)
+- [ ] Confirm dialogs for all destructive actions (delete, deactivate)
+- [ ] Session expiry handling — refresh token auto-renews, expired session → redirect to login
+- [ ] `.env` files per environment (dev, uat, staging, prod)
+- [ ] `.env.example` committed (no real values)
+- [ ] Production build test (frontend + backend)
+
+### Testing (after build)
+- [ ] Full E2E (Playwright — optional): login → create festival → add family → record payment → check dashboard stats correct
+- [ ] All previous phase tests still passing (regression check)
+- [ ] Manual test on mobile screen sizes
+
+### Deliverable
+App is stable, polished, and ready for real temple use. All tests passing.
+
+---
+
+## Phase 11 — Monitoring, Backup & Compliance
+
+> Goal: Production observability, data safety, and legal compliance.
+
+### Tasks
+
+**Monitoring**
+- [ ] Sentry integration — backend + frontend error tracking
+- [ ] Winston log shipping — send logs to cloud (Logtail / Papertrail free tier)
+- [ ] Uptime monitoring setup (UptimeRobot or Betterstack free tier)
+- [ ] Alert setup — notify on production errors + downtime
+
+**DB Backup**
+- [ ] Automated daily backup on production DB (platform-level setting)
+- [ ] Test restore procedure — verify backup can be restored
+
+**Security Hardening**
+- [ ] Verify Helmet.js headers in production (check via browser devtools)
+- [ ] Verify rate limiting working in production
+- [ ] Verify CORS rejects unauthorized origins
+- [ ] Penetration test checklist — SQL injection, XSS, CSRF, auth bypass
+
+**Legal & Compliance**
+- [ ] Privacy policy page added to app
+- [ ] User consent on signup — "I agree to storage of my phone + payment data"
+- [ ] DPDP Act — data deletion flow tested (family delete removes all personal data)
+
+**Performance**
+- [ ] DB query performance check — slow queries identified and indexed
+- [ ] Prisma connection pool configured for production
+- [ ] Lighthouse score check on frontend (performance + accessibility)
+
+### Testing (after build)
+- [ ] Sentry receives test error correctly
+- [ ] Uptime monitor pings and alerts work
+- [ ] DB backup + restore tested
+
+### Deliverable
+App is fully observable, data is backed up, legal requirements met. Production-ready.
+
+---
+
+## Git & CI/CD Strategy
+
+### Platform
+- **Git** — local version control
+- **GitHub** — remote hosting, CI/CD via GitHub Actions, branch protection
+
+### Branch Flow
+```
+local → dev → uat → staging → prod
+```
+
+| Branch | Deploy | Gate |
+|--------|--------|------|
+| `dev` | Dev environment (auto) | CI must pass |
+| `uat` | UAT environment (auto) | CI + 1 reviewer |
+| `staging` | Staging environment (auto) | CI + 1 reviewer |
+| `prod` | Production (manual approval) | CI + manual approval |
+
+### Commit Convention
+```
+feat:    new feature
+fix:     bug fix
+test:    adding/updating tests
+chore:   config, deps, tooling
+docs:    documentation
+```
+
+### Local Pre-push (Husky)
+```
+git push → Husky fires → ESLint → Prettier → Tests → pass? push : block
+```
+
+### GitHub Actions Workflows
+```
+.github/workflows/
+  ci.yml          ← lint + format + test on every push/PR
+  deploy-dev.yml  ← auto deploy on merge to dev
+  deploy-uat.yml  ← auto deploy on merge to uat
+  deploy-prod.yml ← manual approval → deploy to prod
+```
+
+### Deployment Targets
+| Layer | Platform | Plan |
+|-------|---------|------|
+| Frontend | Vercel | Free |
+| Backend | Fly.io | Free (no spin down) |
+| Database | Neon | Free (no pause) |
+| Images | Cloudinary | Free (25GB) |
+
+---
+
+## Dependency Order
+
+```
+Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7 → Phase 8 → Phase 9 → Phase 10 → Phase 11
+```
+
+Each phase depends on the previous. Do not skip ahead.
+
+---
+
+## Testing Strategy
+
+### Frameworks
+| Layer | Framework | Purpose |
+|-------|-----------|---------|
+| Backend unit | Jest | Pure logic (bcrypt, jwt, validators, calculations) |
+| Backend integration | Jest + Supertest | API routes against real test DB |
+| Frontend component | Vitest + RTL | UI behavior, role-based rendering, form validation |
+| E2E (optional) | Playwright | Full flow, Phase 10 only |
+
+### Test DB
+- Separate PostgreSQL DB in Docker (`temple_test`)
+- Same Prisma schema as dev DB
+- Wiped and reseeded before each test run
+- External services mocked: MSG91, Razorpay, Cloudinary
+
+### What is mocked
+- MSG91 → never sends real SMS in tests
+- Razorpay → never makes real payment calls
+- Cloudinary → never uploads real images
+
+### When to write tests
+- **After** each phase is built and manually verified
+- All tests must pass before moving to next phase
+
+---
+
+## Tech Stack Reference
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React + Vite + TypeScript |
+| State | TanStack Query v5 |
+| HTTP | Axios |
+| Backend | Node.js + Express + TypeScript |
+| ORM | Prisma 5 |
+| DB | PostgreSQL 16 (Docker) |
+| Auth | JWT + HTTP-only cookies + bcrypt |
+| SMS / OTP | MSG91 |
+| Payments | Razorpay |
+| Images | Cloudinary (free tier) |
+| Excel | ExcelJS |
+| PDF | react-pdf |
+| Scheduler | node-cron |
+| Backend testing | Jest + Supertest |
+| Frontend testing | Vitest + React Testing Library |
+| E2E testing | Playwright (Phase 10, optional) |
+| Linting | ESLint |
+| Formatting | Prettier |
+| Git hooks | Husky (pre-push) |
+| CI/CD | GitHub Actions |
+| Frontend deploy | Vercel |
+| Backend deploy | TBD (Railway / Render / AWS) |
+| DB deploy | TBD (Supabase / RDS / Railway) |
