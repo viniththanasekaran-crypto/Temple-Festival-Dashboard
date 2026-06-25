@@ -1,0 +1,24 @@
+{
+  "name": "temple-festival-dashboard",
+  "version": "1.0.0",
+  "description": "Temple management app for Tamil Nadu villages",
+  "private": true,
+  "scripts": {
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viniththanasekaran-crypto/Temple-Festival-Dashboard.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/viniththanasekaran-crypto/Temple-Festival-Dashboard/issues"
+  },
+  "homepage": "https://github.com/viniththanasekaran-crypto/Temple-Festival-Dashboard#readme",
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}

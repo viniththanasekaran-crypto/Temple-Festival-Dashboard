@@ -1,0 +1,23 @@
+#!/bin/sh
+set -e
+
+ROOT=$(git rev-parse --show-toplevel)
+
+echo "\n🔍 Pre-push checks starting...\n"
+
+echo "── Frontend lint ──────────────────"
+cd "$ROOT/frontend" && npm run lint
+
+echo "── Frontend format ────────────────"
+npm run format:check
+
+echo "── Backend lint ───────────────────"
+cd "$ROOT/backend" && npm run lint
+
+echo "── Backend format ─────────────────"
+npm run format:check
+
+echo "── Backend tests ──────────────────"
+npm test
+
+echo "\n✅ All checks passed — push allowed!\n"
