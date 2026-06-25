@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  super_admin
+  admin
+  viewer
+}
+
+enum PaymentType {
+  regular
+  extra
+}
+
+enum PaymentMethod {
+  cash
+  online
+}
+
+enum SmsChannel {
+  sms
+  whatsapp
+}
+
+enum SmsStatus {
+  pending
+  sent
+  failed
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model District {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  temples Temple[]
+}
+
+model Temple {
+  id          Int              @id @default(autoincrement())
+  name        String
+  address     String?
+  districtId  Int
+  district    District         @relation(fields: [districtId], references: [id])
+  gallery     TempleGallery[]
+  users       User[]
+  festivals   Festival[]
+  families    Family[]
+  payments    Payment[]
+  smsLogs     SmsLog[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model TempleGallery {
+  id        Int      @id @default(autoincrement())
+  templeId  Int
+  temple    Temple   @relation(fields: [templeId], references: [id])
+  url       String
+  publicId  String
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id             Int              @id @default(autoincrement())
+  username       String           @unique
+  password       String
+  role           Role
+  templeId       Int?
+  temple         Temple?          @relation(fields: [templeId], references: [id])
+  familyId       Int?             @unique
+  family         Family?          @relation(fields: [familyId], references: [id])
+  failedAttempts Int              @default(0)
+  lockedUntil    DateTime?
+  refreshTokens  RefreshToken[]
+  payments       Payment[]        @relation("RecordedBy")
+  auditLogs      PaymentAuditLog[] @relation("EditedBy")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Festival {
+  id          Int              @id @default(autoincrement())
+  templeId    Int
+  temple      Temple           @relation(fields: [templeId], references: [id])
+  name        String
+  startDate   DateTime
+  endDate     DateTime
+  fixedAmount Decimal          @db.Decimal(10, 2)
+  isActive    Boolean          @default(true)
+  agenda      FestivalAgenda[]
+  payments    Payment[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model FestivalAgenda {
+  id          Int      @id @default(autoincrement())
+  festivalId  Int
+  festival    Festival @relation(fields: [festivalId], references: [id], onDelete: Cascade)
+  date        DateTime @db.Date
+  title       String?
+  description String?
+}
+
+model Family {
+  id                 Int              @id @default(autoincrement())
+  templeId           Int
+  temple             Temple           @relation(fields: [templeId], references: [id])
+  headName           String
+  primaryPhone       String
+  address            String?
+  children           Json             @default("[]")
+  profilePicUrl      String?
+  profilePicPublicId String?
+  user               User?
+  payments           Payment[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([templeId, primaryPhone])
+}
+
+model Payment {
+  id              Int               @id @default(autoincrement())
+  templeId        Int
+  temple          Temple            @relation(fields: [templeId], references: [id])
+  festivalId      Int
+  festival        Festival          @relation(fields: [festivalId], references: [id])
+  familyId        Int
+  family          Family            @relation(fields: [familyId], references: [id])
+  amount          Decimal           @db.Decimal(10, 2)
+  type            PaymentType
+  method          PaymentMethod
+  razorpayId      String?           @unique
+  razorpayOrderId String?
+  note            String?
+  recordedById    Int
+  recordedBy      User              @relation("RecordedBy", fields: [recordedById], references: [id])
+  auditLogs       PaymentAuditLog[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model PaymentAuditLog {
+  id        Int      @id @default(autoincrement())
+  paymentId Int
+  payment   Payment  @relation(fields: [paymentId], references: [id])
+  editedById Int
+  editedBy  User     @relation("EditedBy", fields: [editedById], references: [id])
+  oldAmount Decimal  @db.Decimal(10, 2)
+  newAmount Decimal  @db.Decimal(10, 2)
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model SmsLog {
+  id          Int        @id @default(autoincrement())
+  templeId    Int?
+  temple      Temple?    @relation(fields: [templeId], references: [id])
+  channel     SmsChannel
+  recipient   String
+  message     String
+  status      SmsStatus  @default(pending)
+  retryCount  Int        @default(0)
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  createdAt   DateTime   @default(now())
+}
