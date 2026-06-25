@@ -1,0 +1,24 @@
+name: Deploy — Dev
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  deploy-frontend:
+    name: Deploy frontend to Vercel (dev)
+    runs-on: ubuntu-latest
+    needs: []
+    steps:
+      - uses: actions/checkout@v4
+      # TODO: Add Vercel deploy step once VERCEL_TOKEN, VERCEL_ORG_ID,
+      #       VERCEL_PROJECT_ID are added to GitHub secrets
+      - run: echo "Frontend deploy to Vercel dev — configure secrets to enable"
+
+  deploy-backend:
+    name: Deploy backend to Fly.io (dev)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # TODO: Add Fly.io deploy step once FLY_API_TOKEN is added to GitHub secrets
+      - run: echo "Backend deploy to Fly.io dev — configure secrets to enable"

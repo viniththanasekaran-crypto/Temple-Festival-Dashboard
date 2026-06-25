@@ -1,0 +1,22 @@
+name: Deploy — UAT
+
+on:
+  push:
+    branches: [uat]
+
+jobs:
+  deploy-frontend:
+    name: Deploy frontend to Vercel (uat)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # TODO: Configure Vercel secrets and update deploy command
+      - run: echo "Frontend deploy to Vercel UAT — configure secrets to enable"
+
+  deploy-backend:
+    name: Deploy backend to Fly.io (uat)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # TODO: Configure Fly.io secrets and update deploy command
+      - run: echo "Backend deploy to Fly.io UAT — configure secrets to enable"
