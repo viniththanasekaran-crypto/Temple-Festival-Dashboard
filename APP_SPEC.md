@@ -607,36 +607,42 @@ TempleModal
 
 ### User Creation Hierarchy
 ```
-super_admin → creates Admin accounts → assigns to temple
+super_admin → creates super_admin or admin accounts
 Admin       → creates Viewer accounts (family members)
                 ├── Auto-created when adding a family (primary phone)
                 └── Or manually via [Add User] under their temple
 ```
 
+Multiple super_admins are supported. The first is created via `npm run db:seed`. Subsequent super_admins are created through this Users page by an existing super_admin.
+
 ### Layout
 ```
 UsersPage
-  ├── Header: "Users" + [+ Add Admin] button
+  ├── Header: "Users" + [+ Add User] button
   ├── Search bar (by name / phone / temple)
-  ├── Filter by temple (dropdown)
+  ├── Filter by role (dropdown: super_admin | admin)
+  ├── Filter by temple (dropdown — hidden when role = super_admin)
   ├── UserTable
   │     └── Row: Name | Phone | Role | Temple | Status | Actions
   │           └── Actions: [Edit] [Deactivate]
   └── Pagination
 ```
 
-### Add / Edit Admin Modal
+### Add / Edit User Modal
 ```
-AdminModal
+UserModal
   ├── Name (required)
   ├── Phone (required)
+  ├── Role (dropdown: super_admin | admin)
+  ├── Assign Temple (dropdown — required when role = admin, hidden when role = super_admin)
   ├── Password (auto-generated, sent via SMS)
-  ├── Assign Temple (dropdown — search by village/district)
   └── [Cancel] [Save]
 ```
 
 ### Rules
-- super_admin creates admin accounts only (not viewers)
+- super_admin can create both super_admin and admin accounts (not viewers)
+- super_admin accounts have no temple assignment
+- admin accounts must be assigned to a temple
 - On create → SMS sent with login credentials
 - Deactivate instead of hard delete
 - Viewer accounts managed by admin via Families page
@@ -644,10 +650,10 @@ AdminModal
 ### Backend Endpoints
 | Method | Route | Description |
 |--------|-------|-------------|
-| GET | `/users` | List all admin users (super_admin only) |
-| POST | `/users` | Create admin account |
-| PUT | `/users/:id` | Edit admin account |
-| PUT | `/users/:id/deactivate` | Deactivate admin account |
+| GET | `/users` | List all super_admin + admin users (super_admin only) |
+| POST | `/users` | Create super_admin or admin account |
+| PUT | `/users/:id` | Edit user account |
+| PUT | `/users/:id/deactivate` | Deactivate user account |
 
 ---
 

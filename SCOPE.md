@@ -12,7 +12,7 @@ Roles are stored in the `Role` DB table (not hardcoded enums). Permissions are s
 
 | Role | Who | Access |
 |------|-----|--------|
-| super_admin | App owner | All 28 permissions — manages temples, users, and everything |
+| super_admin | App owner(s) | All 28 permissions — manages temples, users, and everything. Multiple allowed; first created via seed, rest via Users page. |
 | admin | Temple admin | 21 permissions — manages festivals, families, payments, SMS (no temple/user mgmt) |
 | viewer | Family member | 5 permissions — reads own festival, family, and payment data |
 

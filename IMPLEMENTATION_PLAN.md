@@ -219,10 +219,10 @@ Login works for all roles. JWT issued. Role-based redirect. Protected routes enf
 - [ ] `POST /temples` — create temple
 - [ ] `PUT /temples/:id` — edit temple
 - [ ] `DELETE /temples/:id` — delete if no festivals/families
-- [ ] `GET /users` — list admin users (super_admin)
-- [ ] `POST /users` — create admin (hash password + SMS credentials via MSG91)
-- [ ] `PUT /users/:id` — edit admin
-- [ ] `PUT /users/:id/deactivate` — deactivate admin
+- [ ] `GET /users` — list all super_admin + admin users (super_admin only)
+- [ ] `POST /users` — create super_admin or admin (role in body; templeId required for admin, null for super_admin; hash password + SMS credentials via MSG91)
+- [ ] `PUT /users/:id` — edit user
+- [ ] `PUT /users/:id/deactivate` — deactivate user
 - [ ] Zod validators for temple + user routes
 
 ### Frontend
@@ -234,18 +234,21 @@ Login works for all roles. JWT issued. Role-based redirect. Protected routes enf
   - Pagination
 - [ ] Add/Edit Temple modal
 - [ ] Users page (`/users`)
-  - Table: name | phone | temple | status | actions
-  - Search + filter by temple
-  - [+ Add Admin] button → modal
+  - Table: name | phone | role | temple | status | actions
+  - Search + filter by role (super_admin / admin) + filter by temple
+  - [+ Add User] button → modal
   - [Edit] [Deactivate] per row
   - Pagination
-- [ ] Add/Edit Admin modal
+- [ ] Add/Edit User modal
+  - Role dropdown: super_admin | admin
+  - Temple assignment field — shown only when role = admin
 
 ### Testing (after build)
 **Backend (Jest + Supertest)**
 - [ ] Integration: `POST /temples` — creates temple, returns correct fields
 - [ ] Integration: `DELETE /temples/:id` — blocked if festivals/families exist
-- [ ] Integration: `POST /users` — creates admin, password hashed, SMS mocked
+- [ ] Integration: `POST /users` with role=admin — creates admin, assigned to temple, SMS mocked
+- [ ] Integration: `POST /users` with role=super_admin — creates super_admin, no templeId
 - [ ] Integration: `PUT /users/:id/deactivate` — user status updated
 - [ ] Integration: non-super_admin accessing `/temples` → 403
 

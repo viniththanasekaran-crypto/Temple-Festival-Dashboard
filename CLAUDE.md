@@ -122,7 +122,7 @@ Expired → POST /api/v1/auth/refresh → bcrypt compare refresh hash → new ac
 Logout  → delete RefreshToken row → clear both cookies
 ```
 
-The `superadmin` user is created by `npm run db:seed` (never through the UI).
+The first `superadmin` is created by `npm run db:seed`. Additional super_admins are created through the Users page (`/users`) by an existing super_admin. Multiple super_admins are supported — super_admins have no `templeId`.
 
 ### Middleware Order (every request)
 ```
