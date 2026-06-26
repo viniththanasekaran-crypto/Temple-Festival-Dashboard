@@ -169,6 +169,22 @@
   border-top: 1px solid #f0eef4;
 }
 
+.viewBtn {
+  flex: 1;
+  padding: 0.35rem;
+  border: 1px solid #c4b5fd;
+  border-radius: 5px;
+  background: #faf5ff;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: #7c3aed;
+  font-weight: 500;
+}
+
+.viewBtn:hover {
+  background: #ede9fe;
+}
+
 .editBtn {
   flex: 1;
   padding: 0.35rem;
@@ -279,4 +295,189 @@
 .submitBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.textarea {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+}
+
+.textarea:focus {
+  border-color: #7c3aed;
+}
+
+/* section dividers inside form */
+.sectionLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #ede9fe;
+  padding-bottom: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.addContactBtn {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #7c3aed;
+  background: none;
+  border: 1px solid #c4b5fd;
+  border-radius: 5px;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+}
+
+.addContactBtn:hover {
+  background: #ede9fe;
+}
+
+.contactRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.contactName {
+  flex: 1;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  outline: none;
+  min-width: 0;
+}
+
+.contactName:focus {
+  border-color: #7c3aed;
+}
+
+.contactRow .phoneRow {
+  flex: 1;
+  min-width: 0;
+}
+
+.removeBtn {
+  padding: 0.35rem 0.55rem;
+  border: 1px solid #fecaca;
+  border-radius: 5px;
+  background: #fff;
+  color: #dc2626;
+  font-size: 0.75rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.removeBtn:hover {
+  background: #fef2f2;
+}
+
+.emptyContacts {
+  font-size: 0.8rem;
+  color: #9c92a3;
+  margin: 0;
+}
+
+/* ── View Details Modal ────────────────────────────────────── */
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.detailDeity {
+  font-size: 0.95rem;
+  color: #7c3aed;
+  font-weight: 500;
+  margin: 0;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.45rem 1rem;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.detailGrid dt {
+  color: #6b6375;
+  font-weight: 500;
+}
+
+.detailGrid dd {
+  color: #1a1523;
+  margin: 0;
+}
+
+.detailSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detailSectionTitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #7c3aed;
+  border-bottom: 1px solid #ede9fe;
+  padding-bottom: 0.3rem;
+}
+
+.detailAbout {
+  font-size: 0.875rem;
+  color: #3d3a44;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.detailPhones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.detailPhones span {
+  font-size: 0.875rem;
+  background: #f5f4f7;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  color: #1a1523;
+}
+
+.detailContacts {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.detailContacts li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.contactPersonName {
+  font-weight: 500;
+  color: #1a1523;
+}
+
+.contactPersonPhone {
+  color: #6b6375;
+  font-size: 0.8rem;
 }

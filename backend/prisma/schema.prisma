@@ -74,7 +74,11 @@ model Temple {
   deity      String?
   village    String?
   address    String?
+  about      String?
   phone      String?
+  phone2     String?
+  phone3     String?
+  contacts   Json     @default("[]") // [{ name, phone }]
   districtId Int
   district   District        @relation(fields: [districtId], references: [id])
   gallery    TempleGallery[]

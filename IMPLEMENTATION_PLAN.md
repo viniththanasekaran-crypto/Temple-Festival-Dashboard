@@ -92,7 +92,7 @@ Both frontend and backend boot. Folder structure in place. Test frameworks, lint
 - [x] `User` — id, username, password (bcrypt), roleId (FK → Role), templeId, familyId, failedAttempts, lockedUntil
 - [x] `RefreshToken` — id, userId, tokenHash (bcrypt), expiresAt
 - [x] `District` — id, name (38 Tamil Nadu districts, seeded)
-- [x] `Temple` — id, name, deity, village, address, phone, districtId
+- [x] `Temple` — id, name, deity, village, address, about, phone, phone2, phone3, contacts (JSON: `[{ name, phone }]`), districtId
 - [x] `TempleGallery` — id, templeId, url, publicId
 - [x] `Festival` — id, templeId, name, description, headName, headPhone, phone2, phone3, startDate, endDate, fixedAmount, isActive
 - [x] `FestivalAgenda` — id, festivalId, date, title, description
@@ -214,42 +214,63 @@ Login works for all roles. JWT issued. Role-based redirect. Protected routes enf
 > Goal: super_admin can create temples and assign admin accounts.
 
 ### Backend
-- [ ] `GET /temples` — list all temples (super_admin)
-- [ ] `POST /temples` — create temple
-- [ ] `PUT /temples/:id` — edit temple
-- [ ] `DELETE /temples/:id` — delete if no festivals/families
-- [ ] `GET /users` — list all super_admin + admin users (super_admin only)
-- [ ] `POST /users` — create super_admin or admin (role in body; templeId required for admin, null for super_admin; hash password + SMS credentials via MSG91)
-- [ ] `PUT /users/:id` — edit user
-- [ ] `PUT /users/:id/deactivate` — deactivate user
-- [ ] Zod validators for temple + user routes
+- [x] `GET /temples` — list all temples (super_admin)
+- [x] `POST /temples` — create temple (name, deity, village, address, about, phone, phone2, phone3, contacts, districtId)
+- [x] `PUT /temples/:id` — edit temple
+- [x] `DELETE /temples/:id` — delete if no festivals/families (409 if has dependencies)
+- [x] `GET /users` — list all super_admin + admin users (super_admin only)
+- [x] `POST /users` — create super_admin or admin (auto-generates password, logs to console; Phase 7 → MSG91 SMS)
+- [x] `PUT /users/:id` — edit user
+- [x] `PUT /users/:id/deactivate` — deactivate user
+- [x] `GET /districts` — list all 38 districts (authenticated)
+- [x] Zod validators for temple + user routes
+
+### Temple Fields
+- `name` — temple name (required)
+- `deity` — presiding deity (optional)
+- `village` — village / area (optional)
+- `address` — full address (optional)
+- `about` — description of the temple (optional, max 2000 chars)
+- `phone` / `phone2` / `phone3` — up to 3 contact numbers (E.164 `+91XXXXXXXXXX`)
+- `contacts` — JSON array `[{ name: string, phone?: string }]` — named contacts (trustee, head, etc.), unlimited
 
 ### Frontend
-- [ ] Temples list page (`/temples`)
-  - Card grid (cover photo placeholder + name + deity + village + district)
+- [x] Temples list page (`/temples`)
+  - Card grid (initial placeholder + name + deity + village + district + primary phone)
   - Search by name / village / district
   - [+ Add Temple] button → modal
-  - [Edit] [Delete] per card
-  - Pagination
-- [ ] Add/Edit Temple modal
-- [ ] Users page (`/users`)
+  - [Details] [Edit] [Delete] per card
+- [x] Add/Edit Temple modal
+  - Fields: name*, deity, village/area, address, about (textarea)
+  - Contact numbers: primary phone, phone 2, phone 3 (all with +91 prefix input)
+  - Temple Contacts: dynamic list — [+ Add] creates a new Name + Phone row; ✕ removes
+  - District selector (populated from `/districts`)
+- [x] Temple Details modal (read-only)
+  - About section, all 3 phones shown as pills, named contacts list
+  - "Edit Temple" button transitions from detail to edit modal
+- [x] Users page (`/users`)
   - Table: name | phone | role | temple | status | actions
-  - Search + filter by role (super_admin / admin) + filter by temple
+  - Search + filter by role
   - [+ Add User] button → modal
   - [Edit] [Deactivate] per row
-  - Pagination
-- [ ] Add/Edit User modal
+- [x] Add/Edit User modal
   - Role dropdown: super_admin | admin
   - Temple assignment field — shown only when role = admin
+  - Phone: +91 prefix + 10-digit input
+- [x] Phone UX throughout: `+91` fixed prefix, 10-digit numeric input, display as `+91 XXXXX XXXXX`
 
 ### Testing (after build)
 **Backend (Jest + Supertest)**
-- [ ] Integration: `POST /temples` — creates temple, returns correct fields
-- [ ] Integration: `DELETE /temples/:id` — blocked if festivals/families exist
-- [ ] Integration: `POST /users` with role=admin — creates admin, assigned to temple, SMS mocked
-- [ ] Integration: `POST /users` with role=super_admin — creates super_admin, no templeId
-- [ ] Integration: `PUT /users/:id/deactivate` — user status updated
-- [ ] Integration: non-super_admin accessing `/temples` → 403
+- [x] Integration: `POST /temples` — creates temple, returns correct fields
+- [x] Integration: `GET /temples` — list with district + counts
+- [x] Integration: `PUT /temples/:id` — updates fields
+- [x] Integration: `DELETE /temples/:id` — blocked if festivals/families exist
+- [x] Integration: `POST /users` with role=admin — creates admin, assigned to temple
+- [x] Integration: `POST /users` with role=super_admin — creates super_admin, no templeId
+- [x] Integration: `POST /users` — missing templeId for admin → 400
+- [x] Integration: `POST /users` — duplicate username → 409
+- [x] Integration: `PUT /users/:id/deactivate` — user status updated
+- [x] Integration: non-super_admin accessing `/temples` → 403
 
 **Frontend (Vitest + RTL)**
 - [ ] Temple card renders name, deity, village
@@ -257,7 +278,7 @@ Login works for all roles. JWT issued. Role-based redirect. Protected routes enf
 - [ ] Add Admin modal — submit creates admin, modal closes
 
 ### Deliverable
-super_admin can create temples and admin accounts. Admin receives SMS with credentials and can log in. All tests passing.
+super_admin can create temples (with contacts, about, multiple phones) and admin accounts. Temple detail modal shows all info. All tests passing.
 
 ---
 
