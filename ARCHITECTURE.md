@@ -34,7 +34,7 @@
 │  ┌──────────────────────────────────────────────────────────────────────────┐  │
 │  │                        Middleware Stack                                   │  │
 │  │  Helmet → CORS → Morgan → Rate Limiter → Cookie Parser → JWT Auth        │  │
-│  │  → Role Check → Temple ID Guard → Zod Validator → Route Handler          │  │
+│  │  → Role/Permission Check → Temple ID Guard → Zod Validator → Route Handler │  │
 │  └──────────────────────────────────────────────────────────────────────────┘  │
 │                                                                                 │
 │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────────┐   │
@@ -119,7 +119,7 @@
     ├── Rate Limiter ────────── Auth: 5 req/min │ API: 100 req/min
     ├── JWT Verify ──────────── Access token from HTTP-only cookie
     ├── Account Lockout ─────── Block after 5 failed logins
-    ├── Role Check ──────────── super_admin / admin / viewer
+    ├── Role/Permission Check ── requireRole() or requirePermission('resource:action')
     ├── Temple Guard ────────── Attach + enforce temple_id
     └── Zod Validation ──────── Reject invalid request bodies
 
@@ -127,11 +127,11 @@
 ║                        DATA FLOW — KEY SCENARIOS                                ║
 ╚══════════════════════════════════════════════════════════════════════════════════╝
 
-  LOGIN (OTP)
-  Phone → POST /auth/otp/send → MSG91 delivers OTP
-       → POST /auth/otp/verify → generate access_token (15min) + refresh_token (7d)
-       → store refresh_token hash in RefreshToken DB table
-       → set both as HTTP-only cookies → role redirect
+  LOGIN (Username + Password)
+  POST /auth/login → bcrypt compare → build permissions[] from Role → Permission DB tables
+       → sign JWT with { userId, roleId, roleName, permissions[], templeId }
+       → store bcrypt(refresh_token) in RefreshToken DB table
+       → set both as HTTP-only cookies → redirect based on roleName
 
   EVERY REQUEST (1000 users = no problem)
   Request arrives → verify access_token signature in-memory (no DB, pure math, ~1ms)

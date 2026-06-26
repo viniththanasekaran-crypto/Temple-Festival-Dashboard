@@ -6,13 +6,17 @@ Temple management web app for Tamil Nadu villages. Admins manage temple festival
 
 ---
 
-## Roles Summary
+## Roles & Permissions
+
+Roles are stored in the `Role` DB table (not hardcoded enums). Permissions are stored in the `Permission` table. Which permissions each role has is controlled via the `RolePermission` junction table — configurable without code changes.
 
 | Role | Who | Access |
 |------|-----|--------|
-| super_admin | App owner | Manages all temples + admin users |
-| admin | Temple admin | Manages festivals, families, payments, SMS |
-| viewer | Family member | Views own festival payments + family profile |
+| super_admin | App owner | All 28 permissions — manages temples, users, and everything |
+| admin | Temple admin | 21 permissions — manages festivals, families, payments, SMS (no temple/user mgmt) |
+| viewer | Family member | 5 permissions — reads own festival, family, and payment data |
+
+JWT carries `roleName` + `permissions[]`. Middleware: `requireRole()` or `requirePermission('resource:action')`.
 
 ---
 
@@ -23,14 +27,15 @@ Temple management web app for Tamil Nadu villages. Admins manage temple festival
 ### Backend
 - [ ] Project setup (Express + TypeScript + Prisma)
 - [ ] PostgreSQL via Docker
-- [ ] Prisma schema — all models (User, Temple, Festival, Family, Payment, FestivalAgenda, SmsLog)
-- [ ] bcrypt password hashing
-- [ ] JWT auth — HTTP-only cookies
-- [ ] Auth routes:
-  - `POST /auth/login` (phone + password)
-  - `POST /auth/otp/send` (MSG91)
-  - `POST /auth/otp/verify` (MSG91)
-- [ ] Role-based middleware (super_admin / admin / viewer)
+- [x] Prisma schema — all 14 models (Role, Permission, RolePermission, User, Temple, Festival, Family, Payment, FestivalAgenda, SmsLog, District, TempleGallery, RefreshToken, PaymentAuditLog)
+- [x] bcrypt password hashing
+- [x] JWT auth — HTTP-only cookies (access 15m + refresh 7d)
+- [x] Auth routes:
+  - `POST /auth/login` (username + password)
+  - `POST /auth/refresh`
+  - `POST /auth/logout`
+- [x] RBAC middleware — `requireRole()` + `requirePermission('resource:action')`
+- [ ] `GET /auth/me` — session persist on page refresh
 - [ ] temple_id guard on all protected routes
 
 ### Frontend

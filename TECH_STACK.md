@@ -83,7 +83,7 @@ temple-app/
   ```
 - **Scalability:** 1000 concurrent users = 1000 in-memory signature verifications. No DB hit per request. Only DB hit is on refresh (every 15 min) and logout.
 - Passwords hashed with **bcrypt** (salt rounds: 10)
-- Role-based access control (RBAC) via middleware
+- **RBAC** — roles and permissions in DB (`Role`, `Permission`, `RolePermission` tables). JWT carries `permissions[]`. Use `requirePermission('resource:action')` on routes.
 - **Helmet.js** — sets secure HTTP headers on every response
 - **Rate limiting** — max login attempts per IP, block after threshold
 - **Account lockout** — lock after 5 failed attempts (failed_attempts + locked_until on User table)
@@ -94,13 +94,21 @@ temple-app/
 
 ---
 
-## Roles
+## Roles & Permissions
 
-| Role | Access |
-|------|--------|
-| Super Admin | Full product access — creates temples, assigns admins |
-| Admin | Manages their temple — festivals, families, payments, SMS |
-| Viewer | Family member — sees only their own family profile and payment history |
+Roles are stored in the `Role` DB table (not hardcoded enums). The `Permission` table lists every grantable action (`resource:action` format). `RolePermission` maps which permissions each role holds — editable without code changes.
+
+| Role | Permissions | Access |
+|------|------------|--------|
+| super_admin | 28 (all) | Full product — manages all temples and admin users |
+| admin | 21 | Temple-scoped — festivals, families, payments, SMS, reports |
+| viewer | 5 | Own data only — festival status, own family, own payment history |
+
+To protect a route:
+```typescript
+requirePermission('festivals:create')  // preferred — fine-grained
+requireRole('super_admin')             // fallback — role name check
+```
 
 ---
 

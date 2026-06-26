@@ -57,27 +57,40 @@ LoginPage
 ### Backend Endpoints
 | Method | Route | Body | Response |
 |--------|-------|------|----------|
-| POST | `/auth/login` | `{ phone, password }` | JWT HTTP-only cookie |
-| POST | `/auth/otp/send` | `{ phone }` | `{ success: true }` |
-| POST | `/auth/otp/verify` | `{ phone, otp }` | JWT HTTP-only cookie |
+| POST | `/auth/login` | `{ username, password }` | JWT HTTP-only cookies + user |
+| POST | `/auth/refresh` | — (uses cookie) | new access_token cookie |
+| POST | `/auth/logout` | — (uses cookie) | clears both cookies |
+| GET | `/auth/me` | — (uses cookie) | current user (for page refresh) |
+| POST | `/auth/otp/send` | `{ phone }` | `{ success: true }` *(Phase 7)* |
+| POST | `/auth/otp/verify` | `{ phone, otp }` | JWT cookies *(Phase 7)* |
 
 ### Auth Flow
-- JWT issued on success → stored as HTTP-only cookie
+- JWT issued on success → stored as two HTTP-only cookies (`access_token` 15m, `refresh_token` 7d)
+- JWT payload carries: `userId`, `roleId`, `roleName`, `permissions[]`, `templeId`
 - After login → redirect based on role:
   - `super_admin` → `/temples`
   - `admin` → `/dashboard`
   - `viewer` → `/dashboard`
 
-### OTP Details
+### RBAC
+Roles and permissions stored in DB — not hardcoded enums. Three default roles seeded:
+- `super_admin` — 28 permissions (full access)
+- `admin` — 21 permissions (temple-scoped, no temple/user management)
+- `viewer` — 5 permissions (own data only)
+
+Route protection uses:
+- `requireRole('super_admin')` — role name check
+- `requirePermission('festivals:create')` — fine-grained permission check (preferred)
+
+### OTP Details *(Phase 7 — requires MSG91 key)*
 - MSG91 handles OTP generation, delivery, storage, expiry
 - Backend calls MSG91 send API → MSG91 delivers SMS
 - Backend calls MSG91 verify API → on success issues JWT
 - No OTP stored in our DB
 
 ### Validation (Zod)
-- Phone: 10-digit Indian mobile number
+- Username: non-empty string
 - Password: min 8 chars
-- OTP: 6-digit numeric
 
 ### Password Storage
 - Hashed with **bcrypt** (salt rounds: 10) before storing in DB
