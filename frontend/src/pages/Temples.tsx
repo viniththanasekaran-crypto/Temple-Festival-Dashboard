@@ -73,7 +73,10 @@ export default function Temples() {
 
   const createMutation = useMutation({
     mutationFn: createTemple,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['temples'] }); closeModal() },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['temples'] })
+      closeModal()
+    },
     onError: (e: { response?: { data?: { message?: string } } }) =>
       setFormError(e.response?.data?.message ?? 'Failed to create temple'),
   })
@@ -81,14 +84,20 @@ export default function Temples() {
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Partial<CreateTemplePayload> }) =>
       updateTemple(id, payload),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['temples'] }); closeModal() },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['temples'] })
+      closeModal()
+    },
     onError: (e: { response?: { data?: { message?: string } } }) =>
       setFormError(e.response?.data?.message ?? 'Failed to update temple'),
   })
 
   const deleteMutation = useMutation({
     mutationFn: deleteTemple,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['temples'] }); setDeleteTarget(null) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['temples'] })
+      setDeleteTarget(null)
+    },
     onError: (e: { response?: { data?: { message?: string } } }) =>
       alert(e.response?.data?.message ?? 'Failed to delete temple'),
   })
@@ -149,7 +158,10 @@ export default function Temples() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setFormError('')
-    if (!form.districtId) { setFormError('Please select a district'); return }
+    if (!form.districtId) {
+      setFormError('Please select a district')
+      return
+    }
     const payload: CreateTemplePayload = {
       name: form.name,
       districtId: form.districtId,
@@ -238,19 +250,32 @@ export default function Temples() {
           <form onSubmit={handleSubmit} className={styles.form}>
             <label>
               Temple Name *
-              <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <input
+                required
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
             </label>
             <label>
               Deity
-              <input value={form.deity} onChange={(e) => setForm({ ...form, deity: e.target.value })} />
+              <input
+                value={form.deity}
+                onChange={(e) => setForm({ ...form, deity: e.target.value })}
+              />
             </label>
             <label>
               Village / Area
-              <input value={form.village} onChange={(e) => setForm({ ...form, village: e.target.value })} />
+              <input
+                value={form.village}
+                onChange={(e) => setForm({ ...form, village: e.target.value })}
+              />
             </label>
             <label>
               Address
-              <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              <input
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+              />
             </label>
             <label>
               About
@@ -320,14 +345,18 @@ export default function Temples() {
               >
                 <option value="">Select district…</option>
                 {districts.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
                 ))}
               </select>
             </label>
 
             {formError && <p className={styles.error}>{formError}</p>}
             <div className={styles.formActions}>
-              <button type="button" className={styles.cancelBtn} onClick={closeModal}>Cancel</button>
+              <button type="button" className={styles.cancelBtn} onClick={closeModal}>
+                Cancel
+              </button>
               <button type="submit" className={styles.submitBtn} disabled={isPending}>
                 {isPending ? 'Saving…' : modal === 'add' ? 'Add Temple' : 'Save Changes'}
               </button>
@@ -388,7 +417,9 @@ export default function Temples() {
                   {viewTarget.contacts.map((c, i) => (
                     <li key={i}>
                       <span className={styles.contactPersonName}>{c.name}</span>
-                      {c.phone && <span className={styles.contactPersonPhone}>{formatPhone(c.phone)}</span>}
+                      {c.phone && (
+                        <span className={styles.contactPersonPhone}>{formatPhone(c.phone)}</span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -396,7 +427,13 @@ export default function Temples() {
             )}
 
             <div className={styles.formActions}>
-              <button className={styles.editBtn} onClick={() => { setViewTarget(null); openEdit(viewTarget) }}>
+              <button
+                className={styles.editBtn}
+                onClick={() => {
+                  setViewTarget(null)
+                  openEdit(viewTarget)
+                }}
+              >
                 Edit Temple
               </button>
               <button className={styles.cancelBtn} onClick={() => setViewTarget(null)}>
@@ -410,7 +447,10 @@ export default function Temples() {
       {/* ── Delete Confirmation ──────────────────────────────────── */}
       {deleteTarget && (
         <Modal title="Delete Temple" onClose={() => setDeleteTarget(null)}>
-          <p>Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This cannot be undone.</p>
+          <p>
+            Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This cannot be
+            undone.
+          </p>
           {(deleteTarget._count.festivals > 0 || deleteTarget._count.families > 0) && (
             <p className={styles.error}>
               Cannot delete — this temple has {deleteTarget._count.festivals} festival(s) and{' '}
@@ -418,10 +458,16 @@ export default function Temples() {
             </p>
           )}
           <div className={styles.formActions}>
-            <button className={styles.cancelBtn} onClick={() => setDeleteTarget(null)}>Cancel</button>
+            <button className={styles.cancelBtn} onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </button>
             <button
               className={styles.deleteBtn}
-              disabled={deleteMutation.isPending || deleteTarget._count.festivals > 0 || deleteTarget._count.families > 0}
+              disabled={
+                deleteMutation.isPending ||
+                deleteTarget._count.festivals > 0 ||
+                deleteTarget._count.families > 0
+              }
               onClick={() => deleteMutation.mutate(deleteTarget.id)}
             >
               {deleteMutation.isPending ? 'Deleting…' : 'Delete'}

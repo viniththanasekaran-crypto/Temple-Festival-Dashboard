@@ -50,8 +50,14 @@ export async function createTemple(payload: CreateTemplePayload): Promise<Temple
   return res.data.data.temple
 }
 
-export async function updateTemple(id: number, payload: Partial<CreateTemplePayload>): Promise<Temple> {
-  const res = await api.put<{ success: boolean; data: { temple: Temple } }>(`/temples/${id}`, payload)
+export async function updateTemple(
+  id: number,
+  payload: Partial<CreateTemplePayload>
+): Promise<Temple> {
+  const res = await api.put<{ success: boolean; data: { temple: Temple } }>(
+    `/temples/${id}`,
+    payload
+  )
   return res.data.data.temple
 }
 
