@@ -1,5 +1,10 @@
 import { Router } from 'express'
-import { loginHandler, refreshHandler, logoutHandler, meHandler } from '../controllers/auth.controller'
+import {
+  loginHandler,
+  refreshHandler,
+  logoutHandler,
+  meHandler,
+} from '../controllers/auth.controller'
 import { authenticate } from '../middleware/auth.middleware'
 
 const router = Router()
