@@ -7,7 +7,10 @@ const phoneE164 = z
 
 const contactSchema = z.object({
   name: z.string().min(1).max(100),
-  phone: z.string().regex(/^\+91\d{10}$/, 'Phone must be in +91XXXXXXXXXX format').optional(),
+  phone: z
+    .string()
+    .regex(/^\+91\d{10}$/, 'Phone must be in +91XXXXXXXXXX format')
+    .optional(),
 })
 
 export const createTempleSchema = z.object({
