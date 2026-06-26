@@ -6,19 +6,19 @@ import prisma from '../lib/prisma'
 const TEST_USER = {
   username: 'test_admin',
   password: 'Test@1234',
-  role: 'admin' as const,
-  templeId: null,
 }
 
 beforeAll(async () => {
   await prisma.refreshToken.deleteMany()
   await prisma.user.deleteMany({ where: { username: TEST_USER.username } })
 
+  const adminRole = await prisma.role.findUniqueOrThrow({ where: { name: 'admin' } })
+
   await prisma.user.create({
     data: {
       username: TEST_USER.username,
       password: await bcrypt.hash(TEST_USER.password, 10),
-      role: TEST_USER.role,
+      roleId: adminRole.id,
     },
   })
 })
@@ -38,6 +38,7 @@ describe('POST /api/v1/auth/login', () => {
     expect(res.status).toBe(200)
     expect(res.body.success).toBe(true)
     expect(res.body.data.user.username).toBe(TEST_USER.username)
+    expect(res.body.data.user.role).toBe('admin')
     expect(res.headers['set-cookie']).toBeDefined()
   })
 

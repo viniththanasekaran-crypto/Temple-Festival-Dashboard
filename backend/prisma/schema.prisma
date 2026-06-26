@@ -9,12 +9,6 @@ datasource db {
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
-enum Role {
-  super_admin
-  admin
-  viewer
-}
-
 enum PaymentType {
   regular
   extra
@@ -36,7 +30,37 @@ enum SmsStatus {
   failed
 }
 
-// ─── Models ───────────────────────────────────────────────────────────────────
+// ─── RBAC ─────────────────────────────────────────────────────────────────────
+
+model Role {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  description String?
+  createdAt   DateTime         @default(now())
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          Int              @id @default(autoincrement())
+  resource    String           // e.g. "festivals", "families"
+  action      String           // e.g. "create", "read", "update", "delete"
+  description String?
+  roles       RolePermission[]
+
+  @@unique([resource, action])
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+// ─── Core Models ──────────────────────────────────────────────────────────────
 
 model District {
   id      Int      @id @default(autoincrement())
@@ -45,19 +69,19 @@ model District {
 }
 
 model Temple {
-  id          Int              @id @default(autoincrement())
-  name        String
-  address     String?
-  districtId  Int
-  district    District         @relation(fields: [districtId], references: [id])
-  gallery     TempleGallery[]
-  users       User[]
-  festivals   Festival[]
-  families    Family[]
-  payments    Payment[]
-  smsLogs     SmsLog[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id        Int             @id @default(autoincrement())
+  name      String
+  address   String?
+  districtId Int
+  district  District        @relation(fields: [districtId], references: [id])
+  gallery   TempleGallery[]
+  users     User[]
+  festivals Festival[]
+  families  Family[]
+  payments  Payment[]
+  smsLogs   SmsLog[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 }
 
 model TempleGallery {
@@ -73,7 +97,8 @@ model User {
   id             Int               @id @default(autoincrement())
   username       String            @unique
   password       String
-  role           Role
+  roleId         Int
+  role           Role              @relation(fields: [roleId], references: [id])
   templeId       Int?
   temple         Temple?           @relation(fields: [templeId], references: [id])
   familyId       Int?              @unique

@@ -86,46 +86,79 @@ Both frontend and backend boot. Folder structure in place. Test frameworks, lint
 > Goal: DB schema defined. Login working end to end for all roles.
 
 ### Database Schema (Prisma)
-- [ ] `User` — id, name, phone (+91 format), password (hashed), role, temple_id, family_id, status, failed_attempts, locked_until, createdAt
-- [ ] `RefreshToken` — id, user_id, token_hash, expires_at, createdAt
-- [ ] `District` — id, name (seeded with all 38 Tamil Nadu districts)
-- [ ] `Temple` — id, name, deity, village, district, address, estYear, phone, description, coverPhoto, createdAt
-- [ ] `TempleGallery` — id, temple_id, imageUrl, publicId, createdAt
-- [ ] `Festival` — id, temple_id, name, description, startDate, endDate, deadline, fixedAmount, status, createdAt
-- [ ] `FestivalAgenda` — id, festival_id, date, agenda
-- [ ] `Family` — id, temple_id, headName, motherName, children[{name, age}], primaryPhone (+91), secondaryPhone, photoUrl, createdAt
-- [ ] `Payment` — id, temple_id, festival_id, family_id, amount, mode, type, razorpayId, recordedBy, createdAt
-- [ ] `PaymentAuditLog` — id, payment_id, changedBy, oldAmount, newAmount, changedAt
-- [ ] `SmsLog` — id, temple_id, festival_id, type, sentTo, count, status, scheduledAt, sentAt, createdAt
+- [x] `Role` — id, name, description (DB table, not enum — dynamically configurable)
+- [x] `Permission` — id, resource, action, description (e.g. resource=`festivals`, action=`create`)
+- [x] `RolePermission` — roleId × permissionId junction (controls what each role can do)
+- [x] `User` — id, username, password (bcrypt), roleId (FK → Role), templeId, familyId, failedAttempts, lockedUntil
+- [x] `RefreshToken` — id, userId, tokenHash (bcrypt), expiresAt
+- [x] `District` — id, name (38 Tamil Nadu districts, seeded)
+- [x] `Temple` — id, name, districtId, address
+- [x] `TempleGallery` — id, templeId, url, publicId
+- [x] `Festival` — id, templeId, name, startDate, endDate, fixedAmount, isActive
+- [x] `FestivalAgenda` — id, festivalId, date, title, description
+- [x] `Family` — id, templeId, headName, primaryPhone, children (JSON), profilePicUrl
+- [x] `Payment` — id, templeId, festivalId, familyId, amount, type, method, razorpayId
+- [x] `PaymentAuditLog` — id, paymentId, editedById, oldAmount, newAmount
+- [x] `SmsLog` — id, templeId, channel, recipient, message, status, scheduledAt, sentAt
+
+### RBAC Design
+Roles and permissions are stored in the DB, not hardcoded as enums. To change what a role can do, update the `RolePermission` table — no code deploy needed.
+
+**Default permissions seeded:**
+
+| Resource | super_admin | admin | viewer |
+|----------|-------------|-------|--------|
+| temples | create, read, update, delete | read | — |
+| users | create, read, update, deactivate | — | — |
+| festivals | create, read, update, delete | create, read, update, delete | read |
+| families | create, read, update, delete, import | create, read, update, delete, import | read |
+| payments | create, read, update | create, read, update | read |
+| reports | read, download | read, download | — |
+| reminders | send, schedule | send, schedule | — |
+| dashboard | read | read | read |
+| gallery | create, delete | create, delete | — |
+| profile | update | update | update |
+
+**JWT payload carries permissions at login time:**
+```json
+{ "userId": 1, "roleId": 1, "roleName": "super_admin", "permissions": ["temples:create", "festivals:read", ...], "templeId": null }
+```
+
+**Middleware:**
+- `requireRole('super_admin')` — checks `req.user.roleName`
+- `requirePermission('festivals:create')` — checks `req.user.permissions.includes(...)`
+
+**Seed script** (`prisma/seed.ts`) creates roles, permissions, 38 districts, and superadmin user. Run with `npm run db:seed`.
 
 ### Backend
-- [ ] Prisma schema + first migration
-- [ ] bcrypt utility (hash + compare)
-- [ ] JWT utility — access token (15 min) + refresh token (7 days), both signed with separate secrets
-- [ ] Random password generator utility
-- [ ] Global error handler middleware — `{ success, message, errors }` on all failures
-- [ ] Swagger setup — `swagger-ui-express` + `swagger-jsdoc` at `/api/docs`
-- [ ] Morgan — HTTP request logging setup
-- [ ] Winston — app logging setup (error + info levels)
-- [ ] Helmet.js — HTTP security headers
-- [ ] CORS — whitelist allowed origins per environment
-- [ ] Rate limiting — auth routes (5 req/min) + API routes (100 req/min)
-- [ ] Account lockout — lock after 5 failed login attempts (15 min cooldown)
-- [ ] API versioning — all routes under `/api/v1/`
-- [ ] `POST /api/v1/auth/login` — phone + password → access + refresh JWT cookies
-- [ ] `POST /api/v1/auth/otp/send` — phone → MSG91 OTP
-- [ ] `POST /api/v1/auth/otp/verify` — phone + otp → JWT cookies
-- [ ] `POST /api/v1/auth/refresh` — refresh token → new access token
-- [ ] `POST /api/v1/auth/logout` — clear both cookies
-- [ ] `GET /api/v1/auth/me` — return current user from JWT
-- [ ] `POST /api/v1/auth/forgot-password` — send OTP to phone
-- [ ] `POST /api/v1/auth/reset-password` — verify OTP → set new password
-- [ ] `PUT /api/v1/auth/change-password` — logged-in user changes own password
-- [ ] Auth middleware — verify access token, auto-refresh if expired
-- [ ] Role middleware — check role (super_admin / admin / viewer)
-- [ ] Temple guard middleware — attach temple_id to all requests
-- [ ] `.env.example` file with all required keys
-- [ ] Zod validators for all auth routes
+- [x] Prisma schema + migrations (incremental via `prisma migrate dev`)
+- [x] Auth middleware — verify access token (JWT), attach user + permissions to `req`
+- [x] Role middleware — `requireRole(...roleNames)`
+- [x] Permission middleware — `requirePermission(permission)` ← new, use this in Phase 2+
+- [x] Account lockout — 5 failed attempts → 15 min lock
+- [x] Rate limiting — 100 req/15min (global)
+- [x] `POST /api/v1/auth/login` — username + password → JWT cookies (access 15m + refresh 7d)
+- [x] `POST /api/v1/auth/refresh` — refresh token → new access token
+- [x] `POST /api/v1/auth/logout` — clear both cookies
+- [ ] `GET /api/v1/auth/me` — return current user from JWT (session persist on page refresh)
+- [ ] Temple guard middleware — attach temple_id from JWT to all scoped requests
+- [ ] Zod validators for all auth routes *(login done; others pending)*
+- [ ] `POST /api/v1/auth/otp/send` — MSG91 OTP *(Phase 7, needs MSG91 key)*
+- [ ] `POST /api/v1/auth/otp/verify` — OTP → JWT cookies *(Phase 7)*
+- [ ] `POST /api/v1/auth/forgot-password` *(Phase 7)*
+- [ ] `POST /api/v1/auth/reset-password` *(Phase 7)*
+- [ ] `PUT /api/v1/auth/change-password` *(Phase 7)*
+
+### Frontend
+- [x] Axios instance (base URL + withCredentials + 401 auto-refresh interceptor)
+- [x] React Router setup
+- [x] Auth context (`useAuth` — user state, login, logout)
+- [x] Login page (username + password form, error states, loading state)
+- [x] Protected route — redirect to `/login` if not authenticated
+- [ ] `GET /auth/me` call on app load (persist session on page refresh)
+- [ ] Role-based redirect after login (super_admin → `/temples`, admin/viewer → `/dashboard`)
+- [ ] TanStack Query provider setup
+- [ ] Navbar shell
 
 ### Frontend
 - [ ] Axios instance (base URL + withCredentials)

@@ -112,13 +112,24 @@ First `super_admin` is created via manual DB insert at initial deployment — ne
 ### Middleware Order (every request)
 ```
 Helmet → CORS → Morgan → Rate Limiter → Cookie Parser
-→ JWT verify → Role check → Temple ID guard → Zod validate → Handler
+→ JWT verify → Role/Permission check → Temple ID guard → Zod validate → Handler
 ```
 
+### RBAC
+Roles and permissions live in the DB (`Role`, `Permission`, `RolePermission` tables), not hardcoded enums. The JWT carries `roleName` + `permissions[]` so route handlers never hit the DB for auth checks.
+
+```typescript
+requireRole('super_admin')              // checks req.user.roleName
+requirePermission('festivals:create')   // checks req.user.permissions[]
+```
+
+To grant/revoke a permission from a role: update `RolePermission` table and re-issue tokens (next login/refresh picks up changes automatically).
+
 ### Core Data Model (non-obvious relationships)
-- `User.family_id` — only set for `viewer` role, links the user account to their family record
-- `User.temple_id` — set for `admin` and `viewer`; `super_admin` has no temple_id
-- `User.failed_attempts` + `User.locked_until` — account lockout (5 attempts → 15 min lock)
+- `User.roleId` → FK to `Role` table (not an enum — dynamically configurable)
+- `User.familyId` — only set for `viewer` role, links the user account to their family record
+- `User.templeId` — set for `admin` and `viewer`; `super_admin` has no templeId
+- `User.failedAttempts` + `User.lockedUntil` — account lockout (5 attempts → 15 min lock)
 - `Family.children` — array of `{ name: string, age: number }`
 - `Family.primaryPhone` — stored as `+919876543210` (with `+91` country code)
 - `FestivalAgenda` — auto-generated rows (one per day) when a festival is created; date range drives count

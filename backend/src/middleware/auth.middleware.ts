@@ -3,7 +3,9 @@ import jwt from 'jsonwebtoken'
 
 export interface JwtPayload {
   userId: number
-  role: string
+  roleId: number
+  roleName: string
+  permissions: string[] // e.g. ["festivals:create", "families:read"]
   templeId: number | null
 }
 
@@ -24,9 +26,19 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export function requireRole(...roles: string[]) {
+export function requireRole(...roleNames: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    if (!req.user || !roleNames.includes(req.user.roleName)) {
+      res.status(403).json({ success: false, message: 'Forbidden' })
+      return
+    }
+    next()
+  }
+}
+
+export function requirePermission(permission: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user || !req.user.permissions.includes(permission)) {
       res.status(403).json({ success: false, message: 'Forbidden' })
       return
     }

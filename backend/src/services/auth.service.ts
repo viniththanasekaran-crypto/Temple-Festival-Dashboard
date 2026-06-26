@@ -7,8 +7,41 @@ import type { LoginInput } from '../schemas/auth.schema'
 const MAX_FAILED_ATTEMPTS = 5
 const LOCKOUT_MINUTES = 15
 
+const ROLE_INCLUDE = {
+  include: {
+    permissions: {
+      include: { permission: true },
+    },
+  },
+}
+
+type RoleWithPermissions = {
+  id: number
+  name: string
+  permissions: { permission: { resource: string; action: string } }[]
+}
+
+function buildPermissions(role: RoleWithPermissions): string[] {
+  return role.permissions.map((rp) => `${rp.permission.resource}:${rp.permission.action}`)
+}
+
+function signAccessToken(
+  userId: number,
+  roleId: number,
+  roleName: string,
+  permissions: string[],
+  templeId: number | null
+) {
+  return jwt.sign({ userId, roleId, roleName, permissions, templeId }, process.env.JWT_SECRET!, {
+    expiresIn: (process.env.JWT_ACCESS_EXPIRY || '15m') as jwt.SignOptions['expiresIn'],
+  })
+}
+
 export async function login(input: LoginInput) {
-  const user = await prisma.user.findUnique({ where: { username: input.username } })
+  const user = await prisma.user.findUnique({
+    where: { username: input.username },
+    include: { role: ROLE_INCLUDE },
+  })
 
   if (!user) {
     return { error: 'Invalid username or password', status: 401 }
@@ -38,10 +71,13 @@ export async function login(input: LoginInput) {
     data: { failedAttempts: 0, lockedUntil: null },
   })
 
-  const accessToken = jwt.sign(
-    { userId: user.id, role: user.role, templeId: user.templeId },
-    process.env.JWT_SECRET!,
-    { expiresIn: (process.env.JWT_ACCESS_EXPIRY || '15m') as jwt.SignOptions['expiresIn'] }
+  const permissions = buildPermissions(user.role as RoleWithPermissions)
+  const accessToken = signAccessToken(
+    user.id,
+    user.roleId,
+    user.role.name,
+    permissions,
+    user.templeId
   )
 
   const rawRefreshToken = crypto.randomBytes(64).toString('hex')
@@ -55,23 +91,36 @@ export async function login(input: LoginInput) {
   return {
     accessToken,
     refreshToken: rawRefreshToken,
-    user: { id: user.id, username: user.username, role: user.role, templeId: user.templeId },
+    user: {
+      id: user.id,
+      username: user.username,
+      role: user.role.name,
+      templeId: user.templeId,
+    },
   }
 }
 
 export async function refresh(rawToken: string) {
   const tokens = await prisma.refreshToken.findMany({
     where: { expiresAt: { gt: new Date() } },
-    include: { user: true },
+    include: {
+      user: {
+        include: { role: ROLE_INCLUDE },
+      },
+    },
   })
 
   for (const record of tokens) {
     const match = await bcrypt.compare(rawToken, record.tokenHash)
     if (match) {
-      const accessToken = jwt.sign(
-        { userId: record.user.id, role: record.user.role, templeId: record.user.templeId },
-        process.env.JWT_SECRET!,
-        { expiresIn: (process.env.JWT_ACCESS_EXPIRY || '15m') as jwt.SignOptions['expiresIn'] }
+      const { user } = record
+      const permissions = buildPermissions(user.role as RoleWithPermissions)
+      const accessToken = signAccessToken(
+        user.id,
+        user.roleId,
+        user.role.name,
+        permissions,
+        user.templeId
       )
       return { accessToken }
     }
