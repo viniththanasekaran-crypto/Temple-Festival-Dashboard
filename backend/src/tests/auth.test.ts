@@ -94,9 +94,7 @@ describe('POST /api/v1/auth/logout', () => {
 
     const cookies = loginRes.headers['set-cookie'] as unknown as string[]
 
-    const res = await request(app)
-      .post('/api/v1/auth/logout')
-      .set('Cookie', cookies.join('; '))
+    const res = await request(app).post('/api/v1/auth/logout').set('Cookie', cookies.join('; '))
 
     expect(res.status).toBe(200)
     expect(res.body.success).toBe(true)

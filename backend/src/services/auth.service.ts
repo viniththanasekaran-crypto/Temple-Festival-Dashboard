@@ -23,9 +23,7 @@ export async function login(input: LoginInput) {
   if (!passwordMatch) {
     const attempts = user.failedAttempts + 1
     const lockedUntil =
-      attempts >= MAX_FAILED_ATTEMPTS
-        ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
-        : null
+      attempts >= MAX_FAILED_ATTEMPTS ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000) : null
 
     await prisma.user.update({
       where: { id: user.id },
