@@ -19,7 +19,8 @@ api.interceptors.response.use(
         )
         return api(original)
       } catch {
-        window.location.href = '/login'
+        // Reject so callers handle it — ProtectedRoute redirects via React Router
+        // (avoids hard reload → infinite loop when AuthContext calls getMe() on mount)
       }
     }
     return Promise.reject(err)

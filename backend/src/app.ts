@@ -9,7 +9,7 @@ import authRoutes from './routes/auth.routes'
 const app = express()
 
 app.use(helmet())
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5174', credentials: true }))
+app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173', credentials: true }))
 app.use(morgan('dev'))
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }))
 app.use(express.json())
