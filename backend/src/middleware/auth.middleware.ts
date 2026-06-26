@@ -7,14 +7,6 @@ export interface JwtPayload {
   templeId: number | null
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: JwtPayload
-    }
-  }
-}
-
 export function authenticate(req: Request, res: Response, next: NextFunction) {
   const token = req.cookies?.access_token
 
