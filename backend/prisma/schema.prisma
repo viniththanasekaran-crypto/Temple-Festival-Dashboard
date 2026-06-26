@@ -1,10 +1,10 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
@@ -70,21 +70,21 @@ model TempleGallery {
 }
 
 model User {
-  id             Int              @id @default(autoincrement())
-  username       String           @unique
+  id             Int               @id @default(autoincrement())
+  username       String            @unique
   password       String
   role           Role
   templeId       Int?
-  temple         Temple?          @relation(fields: [templeId], references: [id])
-  familyId       Int?             @unique
-  family         Family?          @relation(fields: [familyId], references: [id])
-  failedAttempts Int              @default(0)
+  temple         Temple?           @relation(fields: [templeId], references: [id])
+  familyId       Int?              @unique
+  family         Family?           @relation(fields: [familyId], references: [id])
+  failedAttempts Int               @default(0)
   lockedUntil    DateTime?
   refreshTokens  RefreshToken[]
-  payments       Payment[]        @relation("RecordedBy")
+  payments       Payment[]         @relation("RecordedBy")
   auditLogs      PaymentAuditLog[] @relation("EditedBy")
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 }
 
 model RefreshToken {
@@ -121,19 +121,19 @@ model FestivalAgenda {
 }
 
 model Family {
-  id                 Int              @id @default(autoincrement())
+  id                 Int       @id @default(autoincrement())
   templeId           Int
-  temple             Temple           @relation(fields: [templeId], references: [id])
+  temple             Temple    @relation(fields: [templeId], references: [id])
   headName           String
   primaryPhone       String
   address            String?
-  children           Json             @default("[]")
+  children           Json      @default("[]")
   profilePicUrl      String?
   profilePicPublicId String?
   user               User?
   payments           Payment[]
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@unique([templeId, primaryPhone])
 }
@@ -160,15 +160,15 @@ model Payment {
 }
 
 model PaymentAuditLog {
-  id        Int      @id @default(autoincrement())
-  paymentId Int
-  payment   Payment  @relation(fields: [paymentId], references: [id])
+  id         Int      @id @default(autoincrement())
+  paymentId  Int
+  payment    Payment  @relation(fields: [paymentId], references: [id])
   editedById Int
-  editedBy  User     @relation("EditedBy", fields: [editedById], references: [id])
-  oldAmount Decimal  @db.Decimal(10, 2)
-  newAmount Decimal  @db.Decimal(10, 2)
-  note      String?
-  createdAt DateTime @default(now())
+  editedBy   User     @relation("EditedBy", fields: [editedById], references: [id])
+  oldAmount  Decimal  @db.Decimal(10, 2)
+  newAmount  Decimal  @db.Decimal(10, 2)
+  note       String?
+  createdAt  DateTime @default(now())
 }
 
 model SmsLog {

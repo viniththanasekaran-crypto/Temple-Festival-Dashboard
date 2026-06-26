@@ -1,3 +1,6 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('super_admin', 'admin', 'viewer');
 
@@ -220,3 +223,4 @@ ALTER TABLE "PaymentAuditLog" ADD CONSTRAINT "PaymentAuditLog_editedById_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "SmsLog" ADD CONSTRAINT "SmsLog_templeId_fkey" FOREIGN KEY ("templeId") REFERENCES "Temple"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+

@@ -1,0 +1,99 @@
+import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
+import crypto from 'crypto'
+import prisma from '../lib/prisma'
+import type { LoginInput } from '../schemas/auth.schema'
+
+const MAX_FAILED_ATTEMPTS = 5
+const LOCKOUT_MINUTES = 15
+
+export async function login(input: LoginInput) {
+  const user = await prisma.user.findUnique({ where: { username: input.username } })
+
+  if (!user) {
+    return { error: 'Invalid username or password', status: 401 }
+  }
+
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    return { error: 'Account locked. Try again in 15 minutes.', status: 423 }
+  }
+
+  const passwordMatch = await bcrypt.compare(input.password, user.password)
+
+  if (!passwordMatch) {
+    const attempts = user.failedAttempts + 1
+    const lockedUntil =
+      attempts >= MAX_FAILED_ATTEMPTS
+        ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
+        : null
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { failedAttempts: attempts, lockedUntil },
+    })
+
+    return { error: 'Invalid username or password', status: 401 }
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { failedAttempts: 0, lockedUntil: null },
+  })
+
+  const accessToken = jwt.sign(
+    { userId: user.id, role: user.role, templeId: user.templeId },
+    process.env.JWT_SECRET!,
+    { expiresIn: (process.env.JWT_ACCESS_EXPIRY || '15m') as jwt.SignOptions['expiresIn'] }
+  )
+
+  const rawRefreshToken = crypto.randomBytes(64).toString('hex')
+  const tokenHash = await bcrypt.hash(rawRefreshToken, 10)
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+  await prisma.refreshToken.create({
+    data: { userId: user.id, tokenHash, expiresAt },
+  })
+
+  return {
+    accessToken,
+    refreshToken: rawRefreshToken,
+    user: { id: user.id, username: user.username, role: user.role, templeId: user.templeId },
+  }
+}
+
+export async function refresh(rawToken: string) {
+  const tokens = await prisma.refreshToken.findMany({
+    where: { expiresAt: { gt: new Date() } },
+    include: { user: true },
+  })
+
+  for (const record of tokens) {
+    const match = await bcrypt.compare(rawToken, record.tokenHash)
+    if (match) {
+      const accessToken = jwt.sign(
+        { userId: record.user.id, role: record.user.role, templeId: record.user.templeId },
+        process.env.JWT_SECRET!,
+        { expiresIn: (process.env.JWT_ACCESS_EXPIRY || '15m') as jwt.SignOptions['expiresIn'] }
+      )
+      return { accessToken }
+    }
+  }
+
+  return { error: 'Invalid or expired refresh token', status: 401 }
+}
+
+export async function logout(rawToken: string) {
+  const tokens = await prisma.refreshToken.findMany({
+    where: { expiresAt: { gt: new Date() } },
+  })
+
+  for (const record of tokens) {
+    const match = await bcrypt.compare(rawToken, record.tokenHash)
+    if (match) {
+      await prisma.refreshToken.delete({ where: { id: record.id } })
+      return { success: true }
+    }
+  }
+
+  return { success: true }
+}

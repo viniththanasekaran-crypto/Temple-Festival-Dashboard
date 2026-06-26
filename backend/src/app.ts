@@ -4,6 +4,7 @@ import helmet from 'helmet'
 import morgan from 'morgan'
 import cookieParser from 'cookie-parser'
 import { rateLimit } from 'express-rate-limit'
+import authRoutes from './routes/auth.routes'
 
 const app = express()
 
@@ -17,5 +18,7 @@ app.use(cookieParser())
 app.get('/health', (_req, res) => {
   res.json({ success: true, message: 'Temple API is running' })
 })
+
+app.use('/api/v1/auth', authRoutes)
 
 export default app

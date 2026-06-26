@@ -23,7 +23,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@prisma/client": "^7.8.0",
+    "@prisma/client": "^6.19.3",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -50,7 +50,7 @@
     "globals": "^17.7.0",
     "jest": "^30.4.2",
     "prettier": "^3.8.4",
-    "prisma": "^7.8.0",
+    "prisma": "^6.19.3",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.11",
     "tsx": "^4.22.4",
