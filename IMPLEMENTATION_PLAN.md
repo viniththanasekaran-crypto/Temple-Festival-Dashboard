@@ -140,7 +140,7 @@ Roles and permissions are stored in the DB, not hardcoded as enums. To change wh
 - [x] `POST /api/v1/auth/login` — username + password → JWT cookies (access 15m + refresh 7d)
 - [x] `POST /api/v1/auth/refresh` — refresh token → new access token
 - [x] `POST /api/v1/auth/logout` — clear both cookies
-- [ ] `GET /api/v1/auth/me` — return current user from JWT (session persist on page refresh)
+- [x] `GET /api/v1/auth/me` — return current user from JWT (session persist on page refresh)
 - [ ] Temple guard middleware — attach temple_id from JWT to all scoped requests
 - [ ] Zod validators for all auth routes *(login done; others pending)*
 - [ ] `POST /api/v1/auth/otp/send` — MSG91 OTP *(Phase 7, needs MSG91 key)*
@@ -155,17 +155,11 @@ Roles and permissions are stored in the DB, not hardcoded as enums. To change wh
 - [x] Auth context (`useAuth` — user state, login, logout)
 - [x] Login page (username + password form, error states, loading state)
 - [x] Protected route — redirect to `/login` if not authenticated
-- [ ] `GET /auth/me` call on app load (persist session on page refresh)
-- [ ] Role-based redirect after login (super_admin → `/temples`, admin/viewer → `/dashboard`)
+- [x] `GET /auth/me` call on app load (persist session on page refresh)
+- [x] Role-based redirect after login (super_admin → `/temples`, admin/viewer → `/dashboard`)
+- [x] Navbar shell (role-aware links, active state)
 - [ ] TanStack Query provider setup
-- [ ] Navbar shell
-
-### Frontend
-- [ ] Axios instance (base URL + withCredentials)
-- [ ] TanStack Query provider setup
-- [ ] React Router setup
-- [ ] react-i18next setup (English + Tamil)
-- [ ] Language switcher component in navbar
+- [ ] react-i18next setup (English + Tamil) *(Phase 10)*
 - [ ] Translation files: `en.json` + `ta.json`
 - [ ] Login page
   - Tab 1: Phone + Password form
@@ -182,28 +176,33 @@ Roles and permissions are stored in the DB, not hardcoded as enums. To change wh
 
 ### Testing (after build)
 **Backend (Jest + Supertest)**
-- [ ] Unit: bcrypt hash + compare
-- [ ] Unit: JWT sign + verify (access + refresh)
-- [ ] Unit: Zod validators (valid + invalid inputs)
-- [ ] Integration: `POST /auth/login` — correct credentials → JWT cookies set
-- [ ] Integration: `POST /auth/login` — wrong password → 401
-- [ ] Integration: `POST /auth/login` — 5 failed attempts → account locked
-- [ ] Integration: `POST /auth/otp/send` — MSG91 mocked → success
-- [ ] Integration: `POST /auth/otp/verify` — correct OTP → JWT cookies set
-- [ ] Integration: `POST /auth/forgot-password` → OTP sent (MSG91 mocked)
-- [ ] Integration: `POST /auth/reset-password` → password updated
-- [ ] Integration: `POST /auth/refresh` — valid refresh token → new access token
+- [x] Unit: bcrypt hash + compare + salt uniqueness
+- [x] Unit: JWT sign + verify + expired + wrong secret
+- [x] Unit: Zod loginSchema (valid + empty username + empty password + missing fields)
+- [x] Integration: `POST /auth/login` — correct credentials → JWT cookies set
+- [x] Integration: `POST /auth/login` — wrong password → 401
+- [x] Integration: `POST /auth/login` — unknown user → 401
+- [x] Integration: `POST /auth/login` — missing fields → 400
+- [x] Integration: `POST /auth/refresh` — valid refresh token → new access token
+- [x] Integration: `POST /auth/refresh` — no cookie → 401
+- [x] Integration: `POST /auth/logout` — clears cookies
+- [ ] Integration: `POST /auth/login` — 5 failed attempts → account locked (423)
 - [ ] Integration: protected route without JWT → 401
 - [ ] Integration: wrong role on protected route → 403
-- [ ] Integration: rate limit — 6th auth request in 1 min → 429
+- [ ] Integration: `POST /auth/otp/send` *(Phase 7)*
+- [ ] Integration: `POST /auth/otp/verify` *(Phase 7)*
+- [ ] Integration: `POST /auth/forgot-password` *(Phase 7)*
+- [ ] Integration: `POST /auth/reset-password` *(Phase 7)*
 
 **Frontend (Vitest + RTL)**
-- [ ] Login form: shows OTP input after Send OTP clicked
-- [ ] Login form: resend timer counts down 60s
-- [ ] Login form: shows error on wrong password
-- [ ] Protected route: redirects unauthenticated user to /login
-- [ ] Role redirect: admin → /dashboard, super_admin → /temples
-- [ ] Forgot password flow: OTP sent → enter OTP → new password set
+- [x] Login form: renders username + password fields
+- [x] Login form: shows error message on failed login
+- [x] Login form: calls login API with entered credentials
+- [x] Protected route: renders children when authenticated
+- [x] Protected route: redirects to /login when unauthenticated
+- [x] Protected route: renders nothing while loading (prevents flash redirect)
+- [ ] Role redirect: super_admin → /temples after login
+- [ ] Login form: shows OTP input after Send OTP clicked *(Phase 7)*
 
 ### Deliverable
 Login works for all roles. JWT issued. Role-based redirect. Protected routes enforced. All security middleware active. All tests passing.

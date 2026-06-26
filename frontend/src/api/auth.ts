@@ -7,6 +7,11 @@ export interface User {
   templeId: number | null
 }
 
+export async function getMe(): Promise<User> {
+  const res = await api.get<{ success: boolean; data: { user: User } }>('/auth/me')
+  return res.data.data.user
+}
+
 export async function login(username: string, password: string): Promise<User> {
   const res = await api.post<{ success: boolean; data: { user: User } }>('/auth/login', {
     username,

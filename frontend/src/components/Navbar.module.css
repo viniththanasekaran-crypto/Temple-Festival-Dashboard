@@ -1,0 +1,83 @@
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0 1.5rem;
+  height: 56px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #1a1523;
+  white-space: nowrap;
+  margin-right: 0.5rem;
+}
+
+.links {
+  display: flex;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.link {
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #6b6375;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.link:hover {
+  background: #f5f4f7;
+  color: #1a1523;
+}
+
+.active {
+  background: #ede9fe;
+  color: #7c3aed;
+  font-weight: 500;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.username {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1a1523;
+}
+
+.role {
+  font-size: 0.75rem;
+  background: #ede9fe;
+  color: #7c3aed;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.logout {
+  padding: 0.35rem 0.85rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #6b6375;
+  transition: background 0.15s;
+}
+
+.logout:hover {
+  background: #f5f4f7;
+}

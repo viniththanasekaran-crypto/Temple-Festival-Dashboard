@@ -49,6 +49,14 @@ export async function refreshHandler(req: Request, res: Response) {
   res.json({ success: true })
 }
 
+export function meHandler(req: Request, res: Response) {
+  const { userId, username, roleName, templeId } = req.user!
+  res.json({
+    success: true,
+    data: { user: { id: userId, username, role: roleName, templeId } },
+  })
+}
+
 export async function logoutHandler(req: Request, res: Response) {
   const token = req.cookies?.refresh_token
   if (token) await authService.logout(token)

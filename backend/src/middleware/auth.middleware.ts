@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken'
 
 export interface JwtPayload {
   userId: number
+  username: string
   roleId: number
   roleName: string
   permissions: string[] // e.g. ["festivals:create", "families:read"]

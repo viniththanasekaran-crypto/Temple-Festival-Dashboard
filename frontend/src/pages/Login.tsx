@@ -19,7 +19,7 @@ export default function Login() {
     try {
       const user = await login(username, password)
       setUser(user)
-      navigate('/', { replace: true })
+      navigate(user.role === 'super_admin' ? '/temples' : '/', { replace: true })
     } catch (err: unknown) {
       const msg =
         err && typeof err === 'object' && 'response' in err

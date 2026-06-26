@@ -27,14 +27,17 @@ function buildPermissions(role: RoleWithPermissions): string[] {
 
 function signAccessToken(
   userId: number,
+  username: string,
   roleId: number,
   roleName: string,
   permissions: string[],
   templeId: number | null
 ) {
-  return jwt.sign({ userId, roleId, roleName, permissions, templeId }, process.env.JWT_SECRET!, {
-    expiresIn: (process.env.JWT_ACCESS_EXPIRY || '15m') as jwt.SignOptions['expiresIn'],
-  })
+  return jwt.sign(
+    { userId, username, roleId, roleName, permissions, templeId },
+    process.env.JWT_SECRET!,
+    { expiresIn: (process.env.JWT_ACCESS_EXPIRY || '15m') as jwt.SignOptions['expiresIn'] }
+  )
 }
 
 export async function login(input: LoginInput) {
@@ -74,6 +77,7 @@ export async function login(input: LoginInput) {
   const permissions = buildPermissions(user.role as RoleWithPermissions)
   const accessToken = signAccessToken(
     user.id,
+    user.username,
     user.roleId,
     user.role.name,
     permissions,
@@ -117,6 +121,7 @@ export async function refresh(rawToken: string) {
       const permissions = buildPermissions(user.role as RoleWithPermissions)
       const accessToken = signAccessToken(
         user.id,
+        user.username,
         user.roleId,
         user.role.name,
         permissions,
