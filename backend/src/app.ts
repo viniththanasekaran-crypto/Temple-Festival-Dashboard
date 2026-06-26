@@ -5,6 +5,9 @@ import morgan from 'morgan'
 import cookieParser from 'cookie-parser'
 import { rateLimit } from 'express-rate-limit'
 import authRoutes from './routes/auth.routes'
+import templeRoutes from './routes/temple.routes'
+import userRoutes from './routes/user.routes'
+import districtRoutes from './routes/district.routes'
 
 const app = express()
 
@@ -20,5 +23,8 @@ app.get('/health', (_req, res) => {
 })
 
 app.use('/api/v1/auth', authRoutes)
+app.use('/api/v1/temples', templeRoutes)
+app.use('/api/v1/users', userRoutes)
+app.use('/api/v1/districts', districtRoutes)
 
 export default app

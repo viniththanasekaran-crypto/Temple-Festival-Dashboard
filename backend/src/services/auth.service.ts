@@ -50,6 +50,10 @@ export async function login(input: LoginInput) {
     return { error: 'Invalid username or password', status: 401 }
   }
 
+  if (!user.isActive) {
+    return { error: 'Account deactivated. Contact your administrator.', status: 403 }
+  }
+
   if (user.lockedUntil && user.lockedUntil > new Date()) {
     return { error: 'Account locked. Try again in 15 minutes.', status: 423 }
   }
