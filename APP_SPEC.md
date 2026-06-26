@@ -573,7 +573,7 @@ TemplesPage
 TempleModal
   ├── Temple name (required)
   ├── Deity name (required)
-  ├── Village (required)
+  ├── Village / Area (required)
   ├── District (dropdown — 38 Tamil Nadu districts, required)
   ├── Address (optional)
   ├── Established year (optional)
@@ -583,7 +583,7 @@ TempleModal
 ```
 
 ### Rules
-- super_admin searches by village + district first
+- super_admin searches by village/area + district first
 - If not found → [+ Add Temple] to create new one
 - Cover photo + gallery uploaded from Temple Profile page (not here)
 - Delete only if temple has no festivals or families

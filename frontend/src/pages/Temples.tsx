@@ -193,7 +193,7 @@ export default function Temples() {
               />
             </label>
             <label>
-              Village
+              Village / Area
               <input
                 value={form.village}
                 onChange={(e) => setForm({ ...form, village: e.target.value })}

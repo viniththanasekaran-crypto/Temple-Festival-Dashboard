@@ -281,6 +281,44 @@
   cursor: not-allowed;
 }
 
+.phoneRow {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.phoneRow:focus-within {
+  border-color: #7c3aed;
+}
+
+.phonePrefix {
+  padding: 0.45rem 0.65rem;
+  background: #f5f4f7;
+  font-size: 0.875rem;
+  color: #6b6375;
+  border-right: 1px solid #ddd;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.phoneInput {
+  flex: 1;
+  padding: 0.45rem 0.75rem !important;
+  border: none !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  font-size: 0.875rem;
+}
+
+.fieldHint {
+  font-size: 0.75rem;
+  color: #9c92a3;
+  font-weight: 400;
+  margin-top: 0.15rem;
+}
+
 .credBox {
   background: #f5f4f7;
   border-radius: 8px;

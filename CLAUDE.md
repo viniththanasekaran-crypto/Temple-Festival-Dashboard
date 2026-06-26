@@ -153,6 +153,14 @@ Default seeded permissions: `super_admin` → 28, `admin` → 21, `viewer` → 5
 - `src/api/axios.ts` — axios instance with `withCredentials: true` + 401 interceptor that calls `/auth/refresh` once before redirecting to `/login`.
 - `src/api/auth.ts` — typed `login()` and `logout()` functions.
 
+### Tamil / Unicode Text Support
+All text fields (temple name, family name, address, etc.) fully support Tamil and other Unicode scripts end-to-end:
+- **PostgreSQL**: UTF-8 encoding confirmed (`server_encoding = UTF8`). `length()` counts characters (not bytes), so Zod `.max(100)` allows 100 Tamil characters correctly.
+- **Node/Express**: `express.json()` parses UTF-8 JSON bodies natively. No special config needed.
+- **Prisma**: passes `String` values as-is; no transcoding.
+- **React**: input fields accept Tamil via OS/IME keyboard on any device.
+- **Phone numbers**: stored in E.164 format (`+91XXXXXXXXXX`). UI shows `+91` prefix with a 10-digit input; displayed as `+91 XXXXX XXXXX`. Utility in `src/utils/phone.ts` handles format/parse.
+
 ### Core Data Model (non-obvious relationships)
 - `User.roleId` → FK to `Role` table (not an enum — dynamically configurable)
 - `User.familyId` — only set for `viewer` role, links the user account to their family record

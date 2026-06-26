@@ -11,18 +11,27 @@ import {
   type CreateUserPayload,
 } from '../api/users'
 import { getTemples } from '../api/temples'
+import { formatPhone, toE164, fromE164 } from '../utils/phone'
 import styles from './Users.module.css'
 
 type ModalMode = 'add' | 'edit' | null
 type RoleFilter = 'all' | 'super_admin' | 'admin'
 
-const EMPTY_FORM: CreateUserPayload = { username: '', name: '', phone: '', role: 'admin' }
+interface FormState {
+  username: string
+  name: string
+  phone: string // 10-digit, no +91 prefix
+  role: 'super_admin' | 'admin'
+  templeId?: number
+}
+
+const EMPTY_FORM: FormState = { username: '', name: '', phone: '', role: 'admin' }
 
 export default function Users() {
   const qc = useQueryClient()
   const [modal, setModal] = useState<ModalMode>(null)
   const [selected, setSelected] = useState<AdminUser | null>(null)
-  const [form, setForm] = useState<CreateUserPayload>(EMPTY_FORM)
+  const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [formError, setFormError] = useState('')
@@ -73,7 +82,7 @@ export default function Users() {
     setForm({
       username: user.username,
       name: user.name ?? '',
-      phone: user.phone ?? '',
+      phone: fromE164(user.phone ?? ''), // strip +91 for the input
       role: user.role.name as 'super_admin' | 'admin',
       templeId: user.temple?.id,
     })
@@ -87,30 +96,48 @@ export default function Users() {
     setFormError('')
   }
 
+  function handlePhoneChange(raw: string) {
+    // Allow only digits, max 10
+    setForm({ ...form, phone: raw.replace(/\D/g, '').slice(0, 10) })
+  }
+
+  function buildPhoneE164(): string | undefined {
+    if (!form.phone) return undefined
+    const e164 = toE164(form.phone)
+    return e164 || undefined
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setFormError('')
+    if (form.phone && form.phone.length !== 10) {
+      setFormError('Phone must be exactly 10 digits')
+      return
+    }
     if (form.role === 'admin' && !form.templeId) {
       setFormError('Temple is required for admin role')
       return
     }
+    const phone = buildPhoneE164()
     if (modal === 'add') {
       const payload: CreateUserPayload = {
         username: form.username,
         role: form.role,
         ...(form.name && { name: form.name }),
-        ...(form.phone && { phone: form.phone }),
+        ...(phone && { phone }),
         ...(form.role === 'admin' && form.templeId ? { templeId: form.templeId } : {}),
       }
       createMutation.mutate(payload)
     } else if (selected) {
-      const payload = {
-        ...(form.name !== undefined && { name: form.name }),
-        ...(form.phone !== undefined && { phone: form.phone }),
-        role: form.role,
-        templeId: form.role === 'super_admin' ? null : form.templeId,
-      }
-      updateMutation.mutate({ id: selected.id, payload })
+      updateMutation.mutate({
+        id: selected.id,
+        payload: {
+          name: form.name,
+          phone,
+          role: form.role,
+          templeId: form.role === 'super_admin' ? null : form.templeId,
+        },
+      })
     }
   }
 
@@ -183,7 +210,7 @@ export default function Users() {
                       </span>
                     </td>
                     <td>{user.temple?.name ?? '—'}</td>
-                    <td>{user.phone ?? '—'}</td>
+                    <td>{user.phone ? formatPhone(user.phone) : '—'}</td>
                     <td>
                       <span className={user.isActive ? styles.active : styles.inactive}>
                         {user.isActive ? 'Active' : 'Inactive'}
@@ -231,16 +258,23 @@ export default function Users() {
               <input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. Murugan K"
+                placeholder="e.g. முருகன் க"
               />
             </label>
             <label>
-              Phone (+91XXXXXXXXXX)
-              <input
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="+919876543210"
-              />
+              Phone
+              <div className={styles.phoneRow}>
+                <span className={styles.phonePrefix}>+91</span>
+                <input
+                  className={styles.phoneInput}
+                  value={form.phone}
+                  onChange={(e) => handlePhoneChange(e.target.value)}
+                  placeholder="98765 43210"
+                  maxLength={10}
+                  inputMode="numeric"
+                />
+              </div>
+              <span className={styles.fieldHint}>Enter 10-digit mobile number</span>
             </label>
             <label>
               Role *
