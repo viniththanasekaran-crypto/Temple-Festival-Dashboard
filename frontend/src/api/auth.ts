@@ -1,0 +1,20 @@
+import api from './axios'
+
+export interface User {
+  id: number
+  username: string
+  role: 'super_admin' | 'admin' | 'viewer'
+  templeId: number | null
+}
+
+export async function login(username: string, password: string): Promise<User> {
+  const res = await api.post<{ success: boolean; data: { user: User } }>('/auth/login', {
+    username,
+    password,
+  })
+  return res.data.data.user
+}
+
+export async function logout(): Promise<void> {
+  await api.post('/auth/logout')
+}
