@@ -92,9 +92,9 @@ Both frontend and backend boot. Folder structure in place. Test frameworks, lint
 - [x] `User` — id, username, password (bcrypt), roleId (FK → Role), templeId, familyId, failedAttempts, lockedUntil
 - [x] `RefreshToken` — id, userId, tokenHash (bcrypt), expiresAt
 - [x] `District` — id, name (38 Tamil Nadu districts, seeded)
-- [x] `Temple` — id, name, districtId, address
+- [x] `Temple` — id, name, deity, village, address, phone, districtId
 - [x] `TempleGallery` — id, templeId, url, publicId
-- [x] `Festival` — id, templeId, name, startDate, endDate, fixedAmount, isActive
+- [x] `Festival` — id, templeId, name, description, headName, headPhone, phone2, phone3, startDate, endDate, fixedAmount, isActive
 - [x] `FestivalAgenda` — id, festivalId, date, title, description
 - [x] `Family` — id, templeId, headName, primaryPhone, children (JSON), profilePicUrl
 - [x] `Payment` — id, templeId, festivalId, familyId, amount, type, method, razorpayId

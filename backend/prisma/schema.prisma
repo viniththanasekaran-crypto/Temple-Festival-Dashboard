@@ -74,6 +74,7 @@ model Temple {
   deity      String?
   village    String?
   address    String?
+  phone      String?
   districtId Int
   district   District        @relation(fields: [districtId], references: [id])
   gallery    TempleGallery[]
@@ -127,18 +128,23 @@ model RefreshToken {
 }
 
 model Festival {
-  id          Int              @id @default(autoincrement())
-  templeId    Int
-  temple      Temple           @relation(fields: [templeId], references: [id])
-  name        String
-  startDate   DateTime
-  endDate     DateTime
-  fixedAmount Decimal          @db.Decimal(10, 2)
-  isActive    Boolean          @default(true)
-  agenda      FestivalAgenda[]
-  payments    Payment[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id            Int              @id @default(autoincrement())
+  templeId      Int
+  temple        Temple           @relation(fields: [templeId], references: [id])
+  name          String
+  description   String?
+  headName      String?
+  headPhone     String?          // primary contact (+91XXXXXXXXXX)
+  phone2        String?          // optional second contact
+  phone3        String?          // optional third contact
+  startDate     DateTime
+  endDate       DateTime
+  fixedAmount   Decimal          @db.Decimal(10, 2)
+  isActive      Boolean          @default(true)
+  agenda        FestivalAgenda[]
+  payments      Payment[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 }
 
 model FestivalAgenda {

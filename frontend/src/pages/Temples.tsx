@@ -11,15 +11,22 @@ import {
   type Temple,
   type CreateTemplePayload,
 } from '../api/temples'
+import { formatPhone, toE164, fromE164 } from '../utils/phone'
 import styles from './Temples.module.css'
 
 type ModalMode = 'add' | 'edit' | null
 
-const EMPTY_FORM: CreateTemplePayload = {
+// phone field in form holds 10-digit string (no +91 prefix)
+interface TempleFormState extends Omit<CreateTemplePayload, 'phone'> {
+  phone: string
+}
+
+const EMPTY_FORM: TempleFormState = {
   name: '',
   deity: '',
   village: '',
   address: '',
+  phone: '',
   districtId: 0,
 }
 
@@ -27,7 +34,7 @@ export default function Temples() {
   const qc = useQueryClient()
   const [modal, setModal] = useState<ModalMode>(null)
   const [selected, setSelected] = useState<Temple | null>(null)
-  const [form, setForm] = useState<CreateTemplePayload>(EMPTY_FORM)
+  const [form, setForm] = useState<TempleFormState>(EMPTY_FORM)
   const [search, setSearch] = useState('')
   const [formError, setFormError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<Temple | null>(null)
@@ -79,6 +86,7 @@ export default function Temples() {
       deity: temple.deity ?? '',
       village: temple.village ?? '',
       address: temple.address ?? '',
+      phone: fromE164(temple.phone ?? ''),
       districtId: temple.districtId,
     })
     setFormError('')
@@ -98,12 +106,14 @@ export default function Temples() {
       setFormError('Please select a district')
       return
     }
+    const phone = toE164(form.phone)
     const payload: CreateTemplePayload = {
       name: form.name,
       districtId: form.districtId,
       ...(form.deity && { deity: form.deity }),
       ...(form.village && { village: form.village }),
       ...(form.address && { address: form.address }),
+      ...(phone && { phone }),
     }
     if (modal === 'add') {
       createMutation.mutate(payload)
@@ -157,6 +167,7 @@ export default function Temples() {
                 <p className={styles.cardMeta}>
                   {[temple.village, temple.district.name].filter(Boolean).join(', ')}
                 </p>
+                {temple.phone && <p className={styles.cardPhone}>{formatPhone(temple.phone)}</p>}
                 <p className={styles.cardStats}>
                   {temple._count.festivals} festivals · {temple._count.families} families
                 </p>
@@ -205,6 +216,22 @@ export default function Temples() {
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
               />
+            </label>
+            <label>
+              Contact Phone
+              <div className={styles.phoneRow}>
+                <span className={styles.phonePrefix}>+91</span>
+                <input
+                  className={styles.phoneInput}
+                  value={form.phone}
+                  onChange={(e) =>
+                    setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })
+                  }
+                  placeholder="98765 43210"
+                  maxLength={10}
+                  inputMode="numeric"
+                />
+              </div>
             </label>
             <label>
               District *

@@ -119,10 +119,47 @@
   margin: 0 0 0.5rem;
 }
 
+.cardPhone {
+  font-size: 0.8rem;
+  color: #6b6375;
+  margin: 0 0 0.25rem;
+}
+
 .cardStats {
   font-size: 0.75rem;
   color: #9c92a3;
   margin: 0;
+}
+
+.phoneRow {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.phoneRow:focus-within {
+  border-color: #7c3aed;
+}
+
+.phonePrefix {
+  padding: 0.45rem 0.65rem;
+  background: #f5f4f7;
+  font-size: 0.875rem;
+  color: #6b6375;
+  border-right: 1px solid #ddd;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.phoneInput {
+  flex: 1;
+  padding: 0.45rem 0.75rem !important;
+  border: none !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  font-size: 0.875rem;
 }
 
 .cardActions {

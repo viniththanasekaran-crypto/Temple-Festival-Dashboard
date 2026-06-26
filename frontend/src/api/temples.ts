@@ -11,6 +11,7 @@ export interface Temple {
   deity: string | null
   village: string | null
   address: string | null
+  phone: string | null
   districtId: number
   district: District
   _count: { festivals: number; families: number; users: number }
@@ -22,6 +23,7 @@ export interface CreateTemplePayload {
   deity?: string
   village?: string
   address?: string
+  phone?: string
   districtId: number
 }
 
