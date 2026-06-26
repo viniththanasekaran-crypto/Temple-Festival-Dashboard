@@ -185,7 +185,7 @@ async function main() {
   // Upsert superadmin user
   console.log('Seeding superadmin user...')
   const superAdminRole = await prisma.role.findUniqueOrThrow({ where: { name: 'super_admin' } })
-  const hashedPassword = await bcrypt.hash(process.env.SUPERADMIN_PASSWORD || 'Admin@1234', 10)
+  const hashedPassword = await bcrypt.hash('Admin@1234', 10)
 
   await prisma.user.upsert({
     where: { username: 'superadmin' },

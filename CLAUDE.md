@@ -29,7 +29,6 @@ Temple management web app for Tamil Nadu villages. Admins manage temple festival
 | `JWT_ACCESS_EXPIRY` | `15m` |
 | `JWT_REFRESH_EXPIRY` | `7d` |
 | `CORS_ORIGIN` | Allowed frontend origin (e.g. `http://localhost:5173`) |
-| `SUPERADMIN_PASSWORD` | Password for the seeded superadmin user (default: `Admin@1234`) |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
