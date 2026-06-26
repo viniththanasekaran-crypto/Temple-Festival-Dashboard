@@ -23,12 +23,13 @@ Temple management web app for Tamil Nadu villages. Admins manage temple festival
 | `PORT` | Express server port (default 4000) |
 | `NODE_ENV` | `development` / `test` / `production` |
 | `DATABASE_URL` | Dev PostgreSQL connection string |
-| `TEST_DATABASE_URL` | Test PostgreSQL connection string (separate DB) |
+| `TEST_DATABASE_URL` | Test PostgreSQL connection string (separate DB on port 5433) |
 | `JWT_SECRET` | Access token signing secret |
 | `JWT_REFRESH_SECRET` | Refresh token signing secret |
 | `JWT_ACCESS_EXPIRY` | `15m` |
 | `JWT_REFRESH_EXPIRY` | `7d` |
-| `CORS_ORIGIN` | Allowed frontend origin |
+| `CORS_ORIGIN` | Allowed frontend origin (e.g. `http://localhost:5173`) |
+| `SUPERADMIN_PASSWORD` | Password for the seeded superadmin user (default: `Admin@1234`) |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
@@ -48,26 +49,26 @@ Temple management web app for Tamil Nadu villages. Admins manage temple festival
 | `VITE_RAZORPAY_KEY_ID` | Razorpay public key (safe to expose) |
 | `VITE_SENTRY_DSN` | Frontend Sentry DSN (leave blank in dev) |
 
-> Copy `.env.example` → `.env` in both `/backend` and `/frontend` to get started. Never commit `.env` files.
+> Copy `.env.example` → `.env` in both `/backend` and `/frontend` to get started.
 
 ---
 
 ## Dev Commands
 
 ```bash
-# Start local PostgreSQL (dev + test DBs)
+# Start local PostgreSQL (dev port 5432, test port 5433)
 docker compose up -d
 
 # Backend (from /backend)
-npm run dev          # tsx watch mode
+npm run dev          # tsx watch mode on port 4000
 npm run lint         # ESLint
 npm run format       # Prettier
-npm test             # all Jest tests
+npm test             # all Jest tests (--runInBand, uses TEST_DATABASE_URL)
 npm test -- --testPathPattern=auth          # single test file
 npm test -- --testNamePattern="POST /auth/login"  # single test case
 
 # Frontend (from /frontend)
-npm run dev          # Vite dev server
+npm run dev          # Vite dev server on port 5173
 npm run lint         # ESLint
 npm run format       # Prettier
 npm test             # Vitest watch mode
@@ -75,39 +76,54 @@ npx vitest run LoginForm     # single component test (filename filter)
 npx vitest run -t "renders"  # single test by name
 
 # Prisma (from /backend)
-npx prisma migrate dev      # apply migrations + regenerate client
-npx prisma studio           # visual DB browser
-npx prisma db seed          # seed initial data
+npx prisma migrate dev              # apply schema changes + regenerate client
+npx prisma migrate dev --name foo   # with explicit migration name
+npx prisma studio                   # visual DB browser
+npm run db:seed                     # seed roles, permissions, 38 districts, superadmin
 ```
+
+### First-time setup
+```bash
+docker compose up -d
+cd backend
+cp .env.example .env          # fill in JWT_SECRET etc.
+npm install
+npx prisma migrate dev
+npm run db:seed               # creates superadmin (username: superadmin, password: Admin@1234)
+
+# Seed the test DB too — tests require roles to exist
+DATABASE_URL="postgresql://temple:temple@localhost:5433/temple_test" npx prisma migrate deploy
+DATABASE_URL="postgresql://temple:temple@localhost:5433/temple_test" npx tsx prisma/seed.ts
+```
+
+---
 
 ## Frontend Tooling Notes
 
-- **Two config files intentionally**: `vite.config.ts` (build only, imports from `vite`) and `vitest.config.ts` (test only, imports from `vitest/config`). Merging them caused TypeScript type conflicts between Vite 6 and Vitest 3's bundled Vite — keep them separate.
-- **ESLint v9 flat config**: `eslint.config.js` (not `.eslintrc`). Adding new rules goes in that file.
-- **Prettier config**: `.prettierrc` — single quotes, no semicolons, 100 char width.
+- **Two config files intentionally**: `vite.config.ts` (build only, imports from `vite`) and `vitest.config.ts` (test only, imports from `vitest/config`). Merging them caused TypeScript type conflicts between Vite 6 and Vitest 3 — keep them separate.
+- **ESLint v9 flat config**: `eslint.config.js` (not `.eslintrc`). Backend uses `eslint.config.mjs` (`.mjs` because `package.json` is CommonJS).
+- **Prettier**: `.prettierrc` — single quotes, no semicolons, 100 char width.
 
 ---
 
 ## Architecture
 
 ### Multi-tenancy
-Every resource (festival, family, payment) carries `temple_id`. All DB queries **must** filter by `temple_id` — never expose cross-temple data. The `temple_id` comes from the JWT payload, attached to `req` by the temple guard middleware before any route handler runs.
+Every resource (festival, family, payment) carries `templeId`. All DB queries **must** filter by `templeId` — never expose cross-temple data. The `templeId` comes from `req.user.templeId` (set by JWT verify middleware).
 
-### Auth
-Three roles: `super_admin`, `admin`, `viewer` (viewer = family member).
-
+### Auth Flow
 Two JWT tokens per session, both HTTP-only cookies:
 - `access_token` — 15 min, verified in-memory on every request (no DB hit)
 - `refresh_token` — 7 days, bcrypt hash stored in `RefreshToken` table for revocation
 
 ```
-Login  → set both cookies
-Request → verify access_token signature in-memory
-Expired → POST /api/v1/auth/refresh → check hash in DB → new access_token
+Login  → bcrypt compare → build permissions[] from DB → sign JWT → set both cookies
+Request → verify access_token signature in-memory → attach req.user
+Expired → POST /api/v1/auth/refresh → bcrypt compare refresh hash → new access_token
 Logout  → delete RefreshToken row → clear both cookies
 ```
 
-First `super_admin` is created via manual DB insert at initial deployment — never through the UI.
+The `superadmin` user is created by `npm run db:seed` (never through the UI).
 
 ### Middleware Order (every request)
 ```
@@ -116,37 +132,47 @@ Helmet → CORS → Morgan → Rate Limiter → Cookie Parser
 ```
 
 ### RBAC
-Roles and permissions live in the DB (`Role`, `Permission`, `RolePermission` tables), not hardcoded enums. The JWT carries `roleName` + `permissions[]` so route handlers never hit the DB for auth checks.
+Roles and permissions are stored in the DB (`Role`, `Permission`, `RolePermission` tables) — not hardcoded enums. The JWT payload carries `roleName` and `permissions[]` so no DB hit is needed per request.
 
 ```typescript
 requireRole('super_admin')              // checks req.user.roleName
-requirePermission('festivals:create')   // checks req.user.permissions[]
+requirePermission('festivals:create')   // checks req.user.permissions[] — preferred
 ```
 
-To grant/revoke a permission from a role: update `RolePermission` table and re-issue tokens (next login/refresh picks up changes automatically).
+JWT payload shape:
+```typescript
+{ userId, roleId, roleName, permissions: string[], templeId: number | null }
+```
+
+To grant/revoke a permission: update `RolePermission` in the DB. The next login/refresh picks up the change automatically.
+
+Default seeded permissions: `super_admin` → 28, `admin` → 21, `viewer` → 5.
+
+### Frontend Auth Pattern
+- `src/context/AuthContext.tsx` — holds `user` state, `setUser`, `logout`. Wrap app with `<AuthProvider>`.
+- `src/components/ProtectedRoute.tsx` — redirects to `/login` if `user` is null.
+- `src/api/axios.ts` — axios instance with `withCredentials: true` + 401 interceptor that calls `/auth/refresh` once before redirecting to `/login`.
+- `src/api/auth.ts` — typed `login()` and `logout()` functions.
 
 ### Core Data Model (non-obvious relationships)
 - `User.roleId` → FK to `Role` table (not an enum — dynamically configurable)
 - `User.familyId` — only set for `viewer` role, links the user account to their family record
 - `User.templeId` — set for `admin` and `viewer`; `super_admin` has no templeId
 - `User.failedAttempts` + `User.lockedUntil` — account lockout (5 attempts → 15 min lock)
-- `Family.children` — array of `{ name: string, age: number }`
-- `Family.primaryPhone` — stored as `+919876543210` (with `+91` country code)
-- `FestivalAgenda` — auto-generated rows (one per day) when a festival is created; date range drives count
+- `Family.children` — stored as JSON array `[{ name: string, age: number }]`
+- `Family.primaryPhone` — stored with country code: `+919876543210`
+- `FestivalAgenda` — auto-generated rows (one per day) when a festival is created
 - `Payment.type` — `regular` affects pending calculation; `extra` does not
 - `Payment` (online) — auto-populated from Razorpay webhook, NOT editable
 - `Payment` (cash) — admin can edit amount; all edits logged in `PaymentAuditLog`
-- `PaymentAuditLog` — tracks every cash payment edit: who, what changed, when
-- `District` — 38 Tamil Nadu districts stored in DB, seeded once
+- `District` — 38 Tamil Nadu districts, seeded once via `npm run db:seed`
 - Pending = `festival.fixedAmount − SUM(payments where type='regular' and familyId=X and festivalId=Y)`
-- `RefreshToken.token_hash` — bcrypt hash of the token, not the raw token; same token kept for 7 days (no rotation)
-- `SmsLog` — written after every MSG91 send (SMS or WhatsApp), tracks retry count + status
+- `RefreshToken.tokenHash` — bcrypt hash of the raw token (never stored plain); no rotation on use
 
 ### API Design
 - All routes: `/api/v1/`
 - Success: `{ success: true, data: {} }`
 - Error: `{ success: false, message: string, errors?: [] }`
-- Swagger UI at `/api/docs`
 
 ### SMS vs WhatsApp (both via MSG91)
 | Use case | Channel |
@@ -157,53 +183,52 @@ To grant/revoke a permission from a role: update `RolePermission` table and re-i
 ### Family Account Creation (non-obvious flow)
 When admin creates a family:
 1. Check if `User` with `primaryPhone` already exists
-2. If yes → link `user.family_id` to new family (no SMS)
-3. If no → auto-create `viewer` User, generate password, bcrypt hash it, send SMS with credentials via MSG91
+2. If yes → link `user.familyId` to new family (no SMS)
+3. If no → auto-create `viewer` User, generate password, bcrypt hash it, SMS credentials via MSG91
 
 ### Payments
-- Cash → admin records manually via `POST /api/v1/payments`
-- Online → `POST /api/v1/payments/order` creates Razorpay order → family pays → webhook hits `POST /api/v1/payments/webhook` → verify signature → idempotency check → record payment
+- Cash → admin records via `POST /api/v1/payments`
+- Online → `POST /api/v1/payments/order` creates Razorpay order → family pays → webhook `POST /api/v1/payments/webhook` → verify signature → idempotency check (`razorpayId` unique) → record payment
 - Webhook must check `razorpayId` uniqueness before inserting to prevent duplicate records on retry
 
 ### Scheduled SMS
-node-cron jobs stored in memory. On server restart, active schedules from `SmsLog` (status=pending) must be re-registered. Keep this in mind when modifying the reminders service.
+node-cron jobs stored in memory. On server restart, active schedules from `SmsLog` (status=`pending`) must be re-registered. Keep this in mind when modifying the reminders service.
 
 ### Exports & Imports
 - Excel reports → ExcelJS, backend streamed download
-- Bulk family import → admin uploads Excel → backend parses → creates families + accounts + SMS credentials; returns row-level error report for failures
-- Excel import template → downloadable blank format so admin knows exact column structure
-- PDF payment receipt → generated per payment; downloadable by admin + family; can be sent to family WhatsApp via MSG91
+- Bulk family import → admin uploads Excel → backend parses → creates families + accounts + SMS credentials; returns row-level error report
+- PDF receipts → generated per payment, sendable to family WhatsApp via MSG91
 - PDF reports → react-pdf, generated client-side
 
 ### i18n
-- English + Tamil both supported via `react-i18next`
-- Language switcher in navbar for all users
-- Preference saved in localStorage
-
-### Pagination
-- Default: 15 items per page across all list pages
+- English + Tamil via `react-i18next`. Language switcher in navbar. Preference saved in localStorage.
 
 ### Key Constants
 - Phone format: `+919876543210` (always stored with `+91`)
-- Image types: all types accepted, 5MB max per image
+- Image limit: 5MB max, 20 images per temple gallery
 - Account lockout: 5 failed attempts → 15 min lock
 - Refresh token: 7 days, no rotation on use
 - Access token: 15 min expiry
-- Gallery max: 20 images per temple
+- Pagination default: 15 items per page
+
+---
 
 ## Testing
 
 ```bash
-# Backend — integration tests use temple_test PostgreSQL DB (separate Docker container)
+# Backend — integration tests hit the real temple_test PostgreSQL DB
 cd backend && npm test
 
 # Frontend — component tests with Vitest + React Testing Library
 cd frontend && npm test
 ```
 
+- Test DB must be migrated and seeded before the first run (see First-time setup above)
+- Each test file cleans up its own data in `beforeAll`/`afterAll` — the DB is **not** wiped between runs
 - External services always mocked: MSG91, Razorpay, Cloudinary
-- Test DB (`temple_test`) is wiped before each test run
-- Tests written after each phase is complete, before moving to next phase
+- Tests are written after each phase is complete, before moving to the next phase
+
+---
 
 ## Git
 
@@ -211,5 +236,5 @@ cd frontend && npm test
 local → dev → uat → staging → prod
 ```
 
-Pre-push hook (Husky) blocks push if ESLint, Prettier, or tests fail.
+Pre-push hook (Husky at repo root) blocks push if ESLint, Prettier, or backend tests fail.
 Commit format: `feat:` `fix:` `test:` `chore:` `docs:`
