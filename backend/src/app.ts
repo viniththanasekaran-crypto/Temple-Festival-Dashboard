@@ -9,6 +9,7 @@ import templeRoutes from './routes/temple.routes'
 import userRoutes from './routes/user.routes'
 import districtRoutes from './routes/district.routes'
 import festivalRoutes from './routes/festival.routes'
+import familyRoutes from './routes/family.routes'
 
 const app = express()
 
@@ -28,5 +29,6 @@ app.use('/api/v1/temples', templeRoutes)
 app.use('/api/v1/users', userRoutes)
 app.use('/api/v1/districts', districtRoutes)
 app.use('/api/v1/festivals', festivalRoutes)
+app.use('/api/v1/families', familyRoutes)
 
 export default app

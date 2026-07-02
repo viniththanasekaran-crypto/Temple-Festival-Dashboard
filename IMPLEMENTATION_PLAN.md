@@ -335,16 +335,17 @@ Admin can create and manage festivals with a manual day-wise agenda and a paymen
 > Goal: Admin manages families. Family members get auto-created accounts and can log in.
 
 ### Backend
-- [ ] `GET /families` — all families (admin) / own family only (viewer)
-- [ ] `POST /families` — create family + auto-create viewer User (if new phone) + SMS credentials
-- [ ] `PUT /families/:id` — admin edits all fields
-- [ ] `PUT /families/:id/children` — viewer edits children only
-- [ ] `DELETE /families/:id` — delete if no payments
-- [ ] `PUT /families/:id/photo` — upload to Cloudinary, update photoUrl
+- [x] `GET /families` — all families in active temple (admin) / own family only (viewer), scoped by `X-Temple-Id`
+- [x] `POST /families` — create family + link existing account or auto-create viewer User (new phone); credentials stubbed to console (TODO Phase 7: MSG91 SMS)
+- [x] `GET /families/:id` — detail (viewer restricted to own)
+- [x] `PUT /families/:id` — admin edits headName/address/children (phone change deferred — would desync viewer login)
+- [x] `DELETE /families/:id` — blocked if payments (409); also removes the linked viewer account (personal data)
+- [x] Zod validators for family routes
+- [ ] `PUT /families/:id/children` — viewer edits children only *(needs familyId in JWT — next increment)*
+- [ ] `PUT /families/:id/photo` — upload to Cloudinary, update photoUrl *(needs Cloudinary keys)*
 - [ ] `POST /families/import` — parse uploaded Excel, bulk create families, return row-level error report
 - [ ] `GET /families/import/template` — stream blank Excel template download
 - [ ] Cloudinary SDK integration
-- [ ] Zod validators for family routes
 
 ### Frontend
 - [ ] Families list page (`/families`)
@@ -361,11 +362,14 @@ Admin can create and manage festivals with a manual day-wise agenda and a paymen
 
 ### Testing (after build)
 **Backend (Jest + Supertest)**
-- [ ] Integration: `POST /families` — new phone → viewer user created, SMS mocked
-- [ ] Integration: `POST /families` — existing phone → no new user created, no SMS
-- [ ] Integration: `DELETE /families/:id` — blocked if payments exist
-- [ ] Integration: viewer `PUT /families/:id` — cannot edit phone or name → 403
-- [ ] Integration: viewer `PUT /families/:id/children` — children updated correctly
+- [x] Integration: `POST /families` — new phone → viewer user created + credentials returned
+- [x] Integration: `POST /families` — existing phone → linked, no new user, no credentials
+- [x] Integration: `POST /families` — duplicate phone in temple → 409
+- [x] Integration: `GET /families` — admin lists temple families; viewer sees only own
+- [x] Integration: `GET /families/:id` — viewer cannot read another family → 404
+- [x] Integration: `DELETE /families/:id` — removes family + linked viewer account
+- [ ] Integration: `DELETE /families/:id` — blocked if payments exist *(needs Phase 5 payments)*
+- [ ] Integration: viewer `PUT /families/:id/children` — children updated correctly *(next increment)*
 - [ ] Integration: cross-temple family access → 403
 
 **Frontend (Vitest + RTL)**
