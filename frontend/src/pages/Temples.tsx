@@ -28,12 +28,12 @@ interface TempleFormState {
   village: string
   address: string
   about: string
-  phone: string
-  phone2: string
-  phone3: string
   contacts: ContactRow[]
   districtId: number
 }
+
+// A temple must always have at least one contact — the form starts with one row.
+const emptyContacts = (): ContactRow[] => [{ name: '', phone: '' }]
 
 const EMPTY_FORM: TempleFormState = {
   name: '',
@@ -41,10 +41,7 @@ const EMPTY_FORM: TempleFormState = {
   village: '',
   address: '',
   about: '',
-  phone: '',
-  phone2: '',
-  phone3: '',
-  contacts: [],
+  contacts: emptyContacts(),
   districtId: 0,
 }
 
@@ -116,10 +113,7 @@ export default function Temples() {
       village: temple.village ?? '',
       address: temple.address ?? '',
       about: temple.about ?? '',
-      phone: fromE164(temple.phone ?? ''),
-      phone2: fromE164(temple.phone2 ?? ''),
-      phone3: fromE164(temple.phone3 ?? ''),
-      contacts: toFormContacts(temple.contacts),
+      contacts: temple.contacts.length ? toFormContacts(temple.contacts) : emptyContacts(),
       districtId: temple.districtId,
     })
     setFormError('')
@@ -132,16 +126,15 @@ export default function Temples() {
     setFormError('')
   }
 
-  function setPhone(key: 'phone' | 'phone2' | 'phone3', raw: string) {
-    setForm((f) => ({ ...f, [key]: raw.replace(/\D/g, '').slice(0, 10) }))
-  }
-
   function addContact() {
     setForm((f) => ({ ...f, contacts: [...f.contacts, { name: '', phone: '' }] }))
   }
 
   function removeContact(i: number) {
-    setForm((f) => ({ ...f, contacts: f.contacts.filter((_, idx) => idx !== i) }))
+    // Always keep at least one contact row — the first row is mandatory.
+    setForm((f) =>
+      f.contacts.length <= 1 ? f : { ...f, contacts: f.contacts.filter((_, idx) => idx !== i) }
+    )
   }
 
   function updateContact(i: number, field: 'name' | 'phone', value: string) {
@@ -162,6 +155,11 @@ export default function Temples() {
       setFormError('Please select a district')
       return
     }
+    const contacts = toApiContacts(form.contacts)
+    if (contacts.length === 0) {
+      setFormError('Please add at least one temple contact with a name')
+      return
+    }
     const payload: CreateTemplePayload = {
       name: form.name,
       districtId: form.districtId,
@@ -169,10 +167,7 @@ export default function Temples() {
       ...(form.village && { village: form.village }),
       ...(form.address && { address: form.address }),
       ...(form.about && { about: form.about }),
-      ...(toE164(form.phone) && { phone: toE164(form.phone) }),
-      ...(toE164(form.phone2) && { phone2: toE164(form.phone2) }),
-      ...(toE164(form.phone3) && { phone3: toE164(form.phone3) }),
-      contacts: toApiContacts(form.contacts),
+      contacts,
     }
     if (modal === 'add') createMutation.mutate(payload)
     else if (selected) updateMutation.mutate({ id: selected.id, payload })
@@ -288,22 +283,8 @@ export default function Temples() {
               />
             </label>
 
-            <div className={styles.sectionLabel}>Contact Numbers</div>
-            <label>
-              Primary Phone
-              <PhoneInput value={form.phone} onChange={(v) => setPhone('phone', v)} />
-            </label>
-            <label>
-              Phone 2
-              <PhoneInput value={form.phone2} onChange={(v) => setPhone('phone2', v)} />
-            </label>
-            <label>
-              Phone 3
-              <PhoneInput value={form.phone3} onChange={(v) => setPhone('phone3', v)} />
-            </label>
-
             <div className={styles.sectionLabel}>
-              Temple Contacts
+              Temple Contacts *
               <button type="button" className={styles.addContactBtn} onClick={addContact}>
                 + Add
               </button>
@@ -327,14 +308,17 @@ export default function Temples() {
                     onChange={(e) => updateContact(i, 'phone', e.target.value)}
                   />
                 </div>
-                <button type="button" className={styles.removeBtn} onClick={() => removeContact(i)}>
-                  ✕
-                </button>
+                {form.contacts.length > 1 && (
+                  <button
+                    type="button"
+                    className={styles.removeBtn}
+                    onClick={() => removeContact(i)}
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             ))}
-            {form.contacts.length === 0 && (
-              <p className={styles.emptyContacts}>No contacts added yet.</p>
-            )}
 
             <label>
               District *
@@ -475,22 +459,6 @@ export default function Temples() {
           </div>
         </Modal>
       )}
-    </div>
-  )
-}
-
-function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div className={styles.phoneRow}>
-      <span className={styles.phonePrefix}>+91</span>
-      <input
-        className={styles.phoneInput}
-        value={value}
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 10))}
-        placeholder="98765 43210"
-        maxLength={10}
-        inputMode="numeric"
-      />
     </div>
   )
 }
