@@ -34,12 +34,7 @@ beforeAll(async () => {
       username: 'fest_admin',
       roleId: adminRole.id,
       roleName: 'admin',
-      permissions: [
-        'festivals:create',
-        'festivals:read',
-        'festivals:update',
-        'festivals:delete',
-      ],
+      permissions: ['festivals:create', 'festivals:read', 'festivals:update', 'festivals:delete'],
       templeId,
     },
     process.env.JWT_SECRET!,
@@ -91,7 +86,9 @@ describe('Festival CRUD', () => {
     expect(res.body.data.festival.headName).toBe('Murugesan')
     createdFestivalId = res.body.data.festival.id
 
-    const agenda = await prisma.festivalAgenda.findMany({ where: { festivalId: createdFestivalId } })
+    const agenda = await prisma.festivalAgenda.findMany({
+      where: { festivalId: createdFestivalId },
+    })
     expect(agenda).toHaveLength(3) // Aug 1, 2, 3
   })
 
@@ -125,7 +122,9 @@ describe('Festival CRUD', () => {
 
     expect(res.status).toBe(200)
 
-    const agenda = await prisma.festivalAgenda.findMany({ where: { festivalId: createdFestivalId } })
+    const agenda = await prisma.festivalAgenda.findMany({
+      where: { festivalId: createdFestivalId },
+    })
     expect(agenda).toHaveLength(5) // Aug 1-5
   })
 
@@ -148,7 +147,11 @@ describe('Festival CRUD', () => {
     const res = await request(app)
       .post('/api/v1/festivals')
       .set('Cookie', `access_token=${adminToken}`)
-      .send({ startDate: '2026-08-01T00:00:00.000Z', endDate: '2026-08-03T00:00:00.000Z', fixedAmount: 100 })
+      .send({
+        startDate: '2026-08-01T00:00:00.000Z',
+        endDate: '2026-08-03T00:00:00.000Z',
+        fixedAmount: 100,
+      })
 
     expect(res.status).toBe(400)
   })

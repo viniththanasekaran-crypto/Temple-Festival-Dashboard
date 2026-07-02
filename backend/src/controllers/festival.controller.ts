@@ -30,7 +30,9 @@ export async function getFestivalHandler(req: Request, res: Response) {
 export async function createFestivalHandler(req: Request, res: Response) {
   const parsed = createFestivalSchema.safeParse(req.body)
   if (!parsed.success) {
-    res.status(400).json({ success: false, message: 'Validation error', errors: parsed.error.issues })
+    res
+      .status(400)
+      .json({ success: false, message: 'Validation error', errors: parsed.error.issues })
     return
   }
   const festival = await festivalService.createFestival(templeId(req), parsed.data)
@@ -45,7 +47,9 @@ export async function updateFestivalHandler(req: Request, res: Response) {
   }
   const parsed = updateFestivalSchema.safeParse(req.body)
   if (!parsed.success) {
-    res.status(400).json({ success: false, message: 'Validation error', errors: parsed.error.issues })
+    res
+      .status(400)
+      .json({ success: false, message: 'Validation error', errors: parsed.error.issues })
     return
   }
   try {
@@ -53,7 +57,8 @@ export async function updateFestivalHandler(req: Request, res: Response) {
     res.json({ success: true, data: { festival } })
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code
-    if (code === 'NOT_FOUND') res.status(404).json({ success: false, message: 'Festival not found' })
+    if (code === 'NOT_FOUND')
+      res.status(404).json({ success: false, message: 'Festival not found' })
     else throw err
   }
 }
@@ -69,7 +74,8 @@ export async function deleteFestivalHandler(req: Request, res: Response) {
     res.json({ success: true, message: 'Festival deleted' })
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code
-    if (code === 'NOT_FOUND') res.status(404).json({ success: false, message: 'Festival not found' })
+    if (code === 'NOT_FOUND')
+      res.status(404).json({ success: false, message: 'Festival not found' })
     else if (code === 'HAS_DEPENDENCIES')
       res.status(409).json({ success: false, message: (err as Error).message })
     else throw err
