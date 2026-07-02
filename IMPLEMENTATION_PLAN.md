@@ -186,9 +186,9 @@ Roles and permissions are stored in the DB, not hardcoded as enums. To change wh
 - [x] Integration: `POST /auth/refresh` — valid refresh token → new access token
 - [x] Integration: `POST /auth/refresh` — no cookie → 401
 - [x] Integration: `POST /auth/logout` — clears cookies
-- [ ] Integration: `POST /auth/login` — 5 failed attempts → account locked (423)
-- [ ] Integration: protected route without JWT → 401
-- [ ] Integration: wrong role on protected route → 403
+- [x] Integration: `POST /auth/login` — 5 failed attempts → account locked (423)
+- [x] Integration: protected route without JWT → 401
+- [x] Integration: wrong role on protected route → 403
 - [ ] Integration: `POST /auth/otp/send` *(Phase 7)*
 - [ ] Integration: `POST /auth/otp/verify` *(Phase 7)*
 - [ ] Integration: `POST /auth/forgot-password` *(Phase 7)*
@@ -273,9 +273,9 @@ Login works for all roles. JWT issued. Role-based redirect. Protected routes enf
 - [x] Integration: non-super_admin accessing `/temples` → 403
 
 **Frontend (Vitest + RTL)**
-- [ ] Temple card renders name, deity, village
-- [ ] Add Temple modal — submit with missing required field → shows error
-- [ ] Add Admin modal — submit creates admin, modal closes
+- [x] Temple card renders name, deity, village
+- [x] Add Temple modal — submit with missing required field → shows error
+- [x] Add Admin modal — submit creates admin, modal closes
 
 ### Deliverable
 super_admin can create temples (with contacts, about, multiple phones) and admin accounts. Temple detail modal shows all info. All tests passing.

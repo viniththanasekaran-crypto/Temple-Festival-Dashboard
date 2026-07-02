@@ -101,3 +101,50 @@ describe('POST /api/v1/auth/logout', () => {
     expect(res.body.success).toBe(true)
   })
 })
+
+describe('Account lockout', () => {
+  const LOCK_USER = { username: 'test_lockout', password: 'Lock@1234' }
+
+  beforeAll(async () => {
+    await prisma.user.deleteMany({ where: { username: LOCK_USER.username } })
+    const adminRole = await prisma.role.findUniqueOrThrow({ where: { name: 'admin' } })
+    await prisma.user.create({
+      data: {
+        username: LOCK_USER.username,
+        password: await bcrypt.hash(LOCK_USER.password, 10),
+        roleId: adminRole.id,
+      },
+    })
+  })
+
+  afterAll(async () => {
+    await prisma.user.deleteMany({ where: { username: LOCK_USER.username } })
+  })
+
+  it('locks the account (423) after 5 failed attempts', async () => {
+    // 5 wrong-password attempts — the 5th sets lockedUntil
+    for (let i = 0; i < 5; i++) {
+      const res = await request(app)
+        .post('/api/v1/auth/login')
+        .send({ username: LOCK_USER.username, password: 'wrongpass' })
+      expect(res.status).toBe(401)
+    }
+
+    // 6th attempt is rejected as locked before the password is even checked —
+    // correct credentials still return 423 while the lock holds
+    const locked = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ username: LOCK_USER.username, password: LOCK_USER.password })
+
+    expect(locked.status).toBe(423)
+    expect(locked.body.success).toBe(false)
+  })
+})
+
+describe('Protected route without authentication', () => {
+  it('returns 401 when no access_token cookie is present', async () => {
+    const res = await request(app).get('/api/v1/temples')
+    expect(res.status).toBe(401)
+    expect(res.body.success).toBe(false)
+  })
+})
