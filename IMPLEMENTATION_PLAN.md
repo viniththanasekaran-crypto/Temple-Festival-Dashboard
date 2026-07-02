@@ -287,42 +287,44 @@ super_admin can create temples (with contacts, about, multiple phones) and admin
 > Goal: Admin can create and manage festivals with day-wise agenda.
 
 ### Backend
-- [ ] `GET /festivals` — list all (filter by status: active / past)
-- [ ] `POST /festivals` — create + auto-generate FestivalAgenda rows by date range
-- [ ] `PUT /festivals/:id` — edit + update agenda rows
-- [ ] `DELETE /festivals/:id` — delete if no payments
-- [ ] `GET /festivals/:id` — detail + agenda rows
-- [ ] `GET /festivals/:id/payments` — all family payments for festival (admin)
-- [ ] `GET /festivals/:id/my-payments` — logged-in family's payments (viewer)
-- [ ] Zod validators for festival routes
+- [x] `GET /festivals` — list all for the admin's temple (scoped by templeId from JWT)
+- [x] `POST /festivals` — create + auto-generate FestivalAgenda rows (one per day, start → end)
+- [x] `PUT /festivals/:id` — edit + rebuild agenda if dates change
+- [x] `DELETE /festivals/:id` — blocked if payments exist (409)
+- [x] `GET /festivals/:id` — detail + agenda rows (ordered by date)
+- [x] Zod validators: startDate/endDate datetime, endDate ≥ startDate refine, fixedAmount positive
+- [x] RBAC: `requirePermission('festivals:*')` per route; super_admin (no templeId) → 403
+- [ ] `GET /festivals/:id/payments` — all family payments for festival (Phase 5)
+- [ ] `GET /festivals/:id/my-payments` — logged-in family's payments (Phase 5)
 
 ### Frontend
-- [ ] Festivals list page (`/festivals`)
-  - Active festivals section (top)
-  - Past festivals section (below)
-  - [+ New Festival] button → modal
-  - [Edit] [Delete] per row (admin only)
-- [ ] Add/Edit Festival modal
-  - Name, description, start date, end date, deadline, fixed amount, status
-  - Day-wise agenda rows (auto-generated between start + end date)
-- [ ] Festival Detail page (`/festivals/:id`)
-  - Top: festival info + agenda table (read-only, all roles)
-  - Admin below: all families + paid/pending per family + [Record Payment] [Send Reminder]
-  - Viewer below: own family payment status only
+- [x] Festivals list page (`/festivals`) — card grid with Active/Upcoming/Past/Inactive badges
+- [x] Add/Edit Festival modal:
+  - Name*, description (textarea)
+  - Head name + 3 phone numbers (+91 prefix inputs)
+  - Start date* + End date* (date pickers, end ≥ start enforced)
+  - Fixed Amount per family (₹)
+  - Active checkbox
+- [x] Festival Details modal (read-only) — about, contact phones, agenda list (Day N · date · title)
+- [x] Delete confirmation — pre-blocked if payments > 0
 
 ### Testing (after build)
 **Backend (Jest + Supertest)**
-- [ ] Integration: `POST /festivals` — agenda rows auto-generated for each date in range
-- [ ] Integration: `DELETE /festivals/:id` — blocked if payments exist
-- [ ] Integration: `GET /festivals/:id/my-payments` — viewer sees only own family payments
-- [ ] Integration: viewer accessing admin-only festival data → 403
+- [x] Integration: `POST /festivals` — creates festival + 3 agenda rows for 3-day range
+- [x] Integration: `GET /festivals` — lists temple's festivals
+- [x] Integration: `GET /festivals/:id` — returns festival with agenda
+- [x] Integration: `PUT /festivals/:id` — extends date range → agenda rebuilt to 5 days
+- [x] Integration: `POST /festivals` — endDate before startDate → 400
+- [x] Integration: `POST /festivals` — missing name → 400
+- [x] Integration: `DELETE /festivals/:id` — deletes festival with no payments
+- [x] Integration: super_admin (no templeId) accessing `/festivals` → 403
 
 **Frontend (Vitest + RTL)**
-- [ ] Festival modal: agenda rows appear dynamically when start + end date selected
-- [ ] Festival detail: admin sees all families, viewer sees only own payment
+- [ ] Festival card renders name, dates, amount
+- [ ] Add Festival modal — submit with missing required field → shows error
 
 ### Deliverable
-Admin can create festivals with agenda. Festival detail visible correctly per role. All tests passing.
+Admin can create and manage festivals with auto-generated day-wise agenda. Festival details modal shows agenda. All tests passing.
 
 ---
 

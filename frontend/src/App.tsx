@@ -5,6 +5,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Temples from './pages/Temples'
 import Users from './pages/Users'
+import Festivals from './pages/Festivals'
 
 export default function App() {
   return (
@@ -33,6 +34,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Users />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/festivals"
+            element={
+              <ProtectedRoute>
+                <Festivals />
               </ProtectedRoute>
             }
           />
