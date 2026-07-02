@@ -21,7 +21,7 @@ const LINKS = {
 }
 
 export default function Navbar() {
-  const { user, logout } = useAuth()
+  const { user, logout, activeTempleId, setActiveTempleId } = useAuth()
   if (!user) return null
 
   const links = LINKS[user.role] ?? []
@@ -42,6 +42,23 @@ export default function Navbar() {
         ))}
       </div>
       <div className={styles.right}>
+        {user.temples.length === 1 && (
+          <span className={styles.templeBadge}>{user.temples[0].name}</span>
+        )}
+        {user.temples.length > 1 && (
+          <select
+            className={styles.templeSelect}
+            value={activeTempleId ?? ''}
+            onChange={(e) => setActiveTempleId(Number(e.target.value))}
+            aria-label="Active temple"
+          >
+            {user.temples.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        )}
         <span className={styles.username}>{user.username}</span>
         <span className={styles.role}>{user.role.replace('_', ' ')}</span>
         <button onClick={logout} className={styles.logout}>

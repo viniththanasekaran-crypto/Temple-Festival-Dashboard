@@ -9,11 +9,11 @@ export const createUserSchema = z
       .regex(/^\+91\d{10}$/, 'Phone must be in +91XXXXXXXXXX format')
       .optional(),
     role: z.enum(['super_admin', 'admin']),
-    templeId: z.number().int().positive().optional(),
+    templeIds: z.array(z.number().int().positive()).optional(),
   })
-  .refine((data) => data.role !== 'admin' || data.templeId != null, {
-    message: 'templeId is required for admin role',
-    path: ['templeId'],
+  .refine((data) => data.role !== 'admin' || (data.templeIds?.length ?? 0) > 0, {
+    message: 'At least one temple is required for admin role',
+    path: ['templeIds'],
   })
 
 export const updateUserSchema = z
@@ -24,14 +24,14 @@ export const updateUserSchema = z
       .regex(/^\+91\d{10}$/, 'Phone must be in +91XXXXXXXXXX format')
       .optional(),
     role: z.enum(['super_admin', 'admin']).optional(),
-    templeId: z.number().int().positive().nullable().optional(),
+    templeIds: z.array(z.number().int().positive()).optional(),
   })
   .refine(
     (data) => {
-      if (data.role === 'admin' && data.templeId == null) return false
+      if (data.role === 'admin' && (data.templeIds?.length ?? 0) === 0) return false
       return true
     },
-    { message: 'templeId is required for admin role', path: ['templeId'] }
+    { message: 'At least one temple is required for admin role', path: ['templeIds'] }
   )
 
 export type CreateUserInput = z.infer<typeof createUserSchema>

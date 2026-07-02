@@ -1,10 +1,16 @@
 import api from './axios'
 
+export interface TempleRef {
+  id: number
+  name: string
+}
+
 export interface User {
   id: number
   username: string
   role: 'super_admin' | 'admin' | 'viewer'
-  templeId: number | null
+  templeIds: number[]
+  temples: TempleRef[] // id + name of temples this user can act on
 }
 
 export async function getMe(): Promise<User> {

@@ -21,7 +21,13 @@ vi.mock('../api/temples', () => ({
 import * as usersApi from '../api/users'
 import * as templesApi from '../api/temples'
 
-const SUPER_ADMIN = { id: 1, username: 'superadmin', role: 'super_admin' as const, templeId: null }
+const SUPER_ADMIN = {
+  id: 1,
+  username: 'superadmin',
+  role: 'super_admin' as const,
+  templeIds: [],
+  temples: [],
+}
 
 const SAMPLE_TEMPLE = {
   id: 5,
@@ -37,7 +43,7 @@ const CREATED_ADMIN: AdminUser = {
   phone: null,
   isActive: true,
   role: { name: 'admin' },
-  temple: { id: 5, name: 'Palani Temple' },
+  temples: [{ id: 5, name: 'Palani Temple' }],
   createdAt: '2026-01-01T00:00:00.000Z',
 }
 
@@ -45,7 +51,14 @@ function renderUsers() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <AuthContext.Provider
-      value={{ user: SUPER_ADMIN, loading: false, setUser: vi.fn(), logout: vi.fn() }}
+      value={{
+        user: SUPER_ADMIN,
+        loading: false,
+        activeTempleId: null,
+        setUser: vi.fn(),
+        setActiveTempleId: vi.fn(),
+        logout: vi.fn(),
+      }}
     >
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
@@ -72,13 +85,10 @@ describe('Users page', () => {
     fireEvent.change(screen.getByLabelText(/Username/), {
       target: { value: 'admin_palani' },
     })
-    // role defaults to "admin" → temple selector is shown and required.
-    // wait for the option (from the async temples query) before selecting it,
-    // otherwise the select value won't stick to a not-yet-rendered option
-    await screen.findByRole('option', { name: 'Palani Temple' })
-    fireEvent.change(screen.getByLabelText(/Temple/), {
-      target: { value: '5' },
-    })
+    // role defaults to "admin" → the temple checklist is shown. Wait for the
+    // checkbox (from the async temples query) to render, then tick it.
+    const templeCheckbox = await screen.findByLabelText('Palani Temple')
+    fireEvent.click(templeCheckbox)
     // submit the form directly to bypass jsdom's HTML5 required-field guard
     fireEvent.submit(container.querySelector('form')!)
 
@@ -87,7 +97,7 @@ describe('Users page', () => {
       expect(vi.mocked(usersApi.createUser).mock.calls[0]?.[0]).toEqual({
         username: 'admin_palani',
         role: 'admin',
-        templeId: 5,
+        templeIds: [5],
       })
     })
 

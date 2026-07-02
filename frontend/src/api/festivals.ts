@@ -2,9 +2,14 @@ import api from './axios'
 
 export interface FestivalAgenda {
   id: number
-  date: string
+  order: number // day number (1-based)
   title: string | null
   description: string | null
+}
+
+export interface FestivalContact {
+  name: string
+  phone?: string // +91XXXXXXXXXX
 }
 
 export interface Festival {
@@ -16,6 +21,8 @@ export interface Festival {
   headPhone: string | null
   phone2: string | null
   phone3: string | null
+  contacts: FestivalContact[]
+  agenda: FestivalAgenda[]
   startDate: string
   endDate: string
   fixedAmount: string // Prisma Decimal → string in JSON
@@ -24,17 +31,13 @@ export interface Festival {
   createdAt: string
 }
 
-export interface FestivalDetail extends Festival {
-  agenda: FestivalAgenda[]
-}
+export type FestivalDetail = Festival
 
 export interface CreateFestivalPayload {
   name: string
   description?: string
-  headName?: string
-  headPhone?: string
-  phone2?: string
-  phone3?: string
+  contacts?: FestivalContact[]
+  agenda?: { title: string; description?: string }[]
   startDate: string // ISO datetime
   endDate: string // ISO datetime
   fixedAmount: number

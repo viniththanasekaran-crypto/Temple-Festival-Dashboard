@@ -89,13 +89,13 @@ Both frontend and backend boot. Folder structure in place. Test frameworks, lint
 - [x] `Role` — id, name, description (DB table, not enum — dynamically configurable)
 - [x] `Permission` — id, resource, action, description (e.g. resource=`festivals`, action=`create`)
 - [x] `RolePermission` — roleId × permissionId junction (controls what each role can do)
-- [x] `User` — id, username, password (bcrypt), roleId (FK → Role), templeId, familyId, failedAttempts, lockedUntil
+- [x] `User` — id, username, password (bcrypt), roleId (FK → Role), temples (m-n via `_TempleToUser` — admins manage many, viewers one), familyId, failedAttempts, lockedUntil
 - [x] `RefreshToken` — id, userId, tokenHash (bcrypt), expiresAt
 - [x] `District` — id, name (38 Tamil Nadu districts, seeded)
 - [x] `Temple` — id, name, deity, village, address, about, phone, phone2, phone3, contacts (JSON: `[{ name, phone }]`), districtId
 - [x] `TempleGallery` — id, templeId, url, publicId
 - [x] `Festival` — id, templeId, name, description, headName, headPhone, phone2, phone3, startDate, endDate, fixedAmount, isActive
-- [x] `FestivalAgenda` — id, festivalId, date, title, description
+- [x] `FestivalAgenda` — id, festivalId, order (Day number), date (optional), title, description — manual day-wise entries
 - [x] `Family` — id, templeId, headName, primaryPhone, children (JSON), profilePicUrl
 - [x] `Payment` — id, templeId, festivalId, familyId, amount, type, method, razorpayId
 - [x] `PaymentAuditLog` — id, paymentId, editedById, oldAmount, newAmount
@@ -121,7 +121,7 @@ Roles and permissions are stored in the DB, not hardcoded as enums. To change wh
 
 **JWT payload carries permissions at login time:**
 ```json
-{ "userId": 1, "roleId": 1, "roleName": "super_admin", "permissions": ["temples:create", "festivals:read", ...], "templeId": null }
+{ "userId": 1, "username": "superadmin", "roleId": 1, "roleName": "super_admin", "permissions": ["temples:create", "festivals:read", ...], "templeIds": [] }
 ```
 
 **Middleware:**
@@ -255,7 +255,7 @@ Login works for all roles. JWT issued. Role-based redirect. Protected routes enf
   - [Edit] [Deactivate] per row
 - [x] Add/Edit User modal
   - Role dropdown: super_admin | admin
-  - Temple assignment field — shown only when role = admin
+  - Temple assignment — multi-select checklist (an admin can manage several temples), shown only when role = admin
   - Phone: +91 prefix + 10-digit input
 - [x] Phone UX throughout: `+91` fixed prefix, 10-digit numeric input, display as `+91 XXXXX XXXXX`
 
@@ -266,8 +266,8 @@ Login works for all roles. JWT issued. Role-based redirect. Protected routes enf
 - [x] Integration: `PUT /temples/:id` — updates fields
 - [x] Integration: `DELETE /temples/:id` — blocked if festivals/families exist
 - [x] Integration: `POST /users` with role=admin — creates admin, assigned to temple
-- [x] Integration: `POST /users` with role=super_admin — creates super_admin, no templeId
-- [x] Integration: `POST /users` — missing templeId for admin → 400
+- [x] Integration: `POST /users` with role=super_admin — creates super_admin, no temples
+- [x] Integration: `POST /users` — admin with no temples → 400
 - [x] Integration: `POST /users` — duplicate username → 409
 - [x] Integration: `PUT /users/:id/deactivate` — user status updated
 - [x] Integration: non-super_admin accessing `/temples` → 403
@@ -287,13 +287,13 @@ super_admin can create temples (with contacts, about, multiple phones) and admin
 > Goal: Admin can create and manage festivals with day-wise agenda.
 
 ### Backend
-- [x] `GET /festivals` — list all for the admin's temple (scoped by templeId from JWT)
-- [x] `POST /festivals` — create + auto-generate FestivalAgenda rows (one per day, start → end)
-- [x] `PUT /festivals/:id` — edit + rebuild agenda if dates change
+- [x] `GET /festivals` — list all for the active temple (scoped by `X-Temple-Id`, validated against the admin's `templeIds`)
+- [x] `POST /festivals` — create + persist the provided day-wise agenda (order = list position)
+- [x] `PUT /festivals/:id` — edit + replace the agenda when a new list is provided
 - [x] `DELETE /festivals/:id` — blocked if payments exist (409)
-- [x] `GET /festivals/:id` — detail + agenda rows (ordered by date)
-- [x] Zod validators: startDate/endDate datetime, endDate ≥ startDate refine, fixedAmount positive
-- [x] RBAC: `requirePermission('festivals:*')` per route; super_admin (no templeId) → 403
+- [x] `GET /festivals/:id` — detail + agenda rows (ordered by `order`)
+- [x] Zod validators: startDate/endDate datetime (payment window), endDate ≥ startDate refine, fixedAmount positive, agenda[] items
+- [x] RBAC: `requirePermission('festivals:*')` per route; user with no temples (e.g. super_admin) → 403 via `resolveTemple`
 - [ ] `GET /festivals/:id/payments` — all family payments for festival (Phase 5)
 - [ ] `GET /festivals/:id/my-payments` — logged-in family's payments (Phase 5)
 
@@ -301,30 +301,32 @@ super_admin can create temples (with contacts, about, multiple phones) and admin
 - [x] Festivals list page (`/festivals`) — card grid with Active/Upcoming/Past/Inactive badges
 - [x] Add/Edit Festival modal:
   - Name*, description (textarea)
-  - Head name + 3 phone numbers (+91 prefix inputs)
-  - Start date* + End date* (date pickers, end ≥ start enforced)
+  - Festival Contacts — dynamic name + phone list (Day-1-style; one mandatory row, + Add)
+  - Agenda* — dynamic day-wise list (Day 1 mandatory, + Add for more days)
+  - Payment Start Date* + Payment Due Date* (date pickers, due ≥ start enforced) — the payment window families see
   - Fixed Amount per family (₹)
   - Active checkbox
-- [x] Festival Details modal (read-only) — about, contact phones, agenda list (Day N · date · title)
+- [x] Festival Details modal (read-only) — about, contacts, agenda list (Day N · title)
 - [x] Delete confirmation — pre-blocked if payments > 0
 
 ### Testing (after build)
 **Backend (Jest + Supertest)**
-- [x] Integration: `POST /festivals` — creates festival + 3 agenda rows for 3-day range
+- [x] Integration: `POST /festivals` — creates festival + persists the provided agenda (order 1..n)
 - [x] Integration: `GET /festivals` — lists temple's festivals
 - [x] Integration: `GET /festivals/:id` — returns festival with agenda
-- [x] Integration: `PUT /festivals/:id` — extends date range → agenda rebuilt to 5 days
+- [x] Integration: `PUT /festivals/:id` — replaces the agenda when a new list is provided
 - [x] Integration: `POST /festivals` — endDate before startDate → 400
 - [x] Integration: `POST /festivals` — missing name → 400
 - [x] Integration: `DELETE /festivals/:id` — deletes festival with no payments
-- [x] Integration: super_admin (no templeId) accessing `/festivals` → 403
+- [x] Integration: super_admin (no temples) accessing `/festivals` → 403
+- [x] Integration: multi-temple admin without `X-Temple-Id` → 400; wrong temple → 403; valid header scopes results
 
 **Frontend (Vitest + RTL)**
 - [ ] Festival card renders name, dates, amount
 - [ ] Add Festival modal — submit with missing required field → shows error
 
 ### Deliverable
-Admin can create and manage festivals with auto-generated day-wise agenda. Festival details modal shows agenda. All tests passing.
+Admin can create and manage festivals with a manual day-wise agenda and a payment window. Festival details modal shows agenda. All tests passing.
 
 ---
 

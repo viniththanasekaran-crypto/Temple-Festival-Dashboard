@@ -2,6 +2,18 @@ import { z } from 'zod'
 
 const phoneE164 = z.string().regex(/^\+91\d{10}$/, 'Phone must be in +91XXXXXXXXXX format')
 
+const contactSchema = z.object({
+  name: z.string().min(1).max(100),
+  phone: phoneE164.optional(),
+})
+
+// Day-wise agenda entries (order = list position). Consolidated for WhatsApp
+// and shown on the viewer's festival dashboard.
+const agendaItemSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(1000).optional(),
+})
+
 export const createFestivalSchema = z
   .object({
     name: z.string().min(2).max(150),
@@ -10,6 +22,8 @@ export const createFestivalSchema = z
     headPhone: phoneE164.optional(),
     phone2: phoneE164.optional(),
     phone3: phoneE164.optional(),
+    contacts: z.array(contactSchema).optional(),
+    agenda: z.array(agendaItemSchema).optional(),
     startDate: z.string().datetime(),
     endDate: z.string().datetime(),
     fixedAmount: z.number().positive(),
@@ -28,6 +42,8 @@ export const updateFestivalSchema = z
     headPhone: phoneE164.optional(),
     phone2: phoneE164.optional(),
     phone3: phoneE164.optional(),
+    contacts: z.array(contactSchema).optional(),
+    agenda: z.array(agendaItemSchema).optional(),
     startDate: z.string().datetime().optional(),
     endDate: z.string().datetime().optional(),
     fixedAmount: z.number().positive().optional(),

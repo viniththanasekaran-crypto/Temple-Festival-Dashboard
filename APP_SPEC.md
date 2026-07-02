@@ -66,7 +66,8 @@ LoginPage
 
 ### Auth Flow
 - JWT issued on success → stored as two HTTP-only cookies (`access_token` 15m, `refresh_token` 7d)
-- JWT payload carries: `userId`, `roleId`, `roleName`, `permissions[]`, `templeId`
+- JWT payload carries: `userId`, `username`, `roleId`, `roleName`, `permissions[]`, `templeIds[]`
+- An admin may manage multiple temples; the active one is chosen via a navbar switcher and sent as the `X-Temple-Id` header on each request
 - After login → redirect based on role:
   - `super_admin` → `/temples`
   - `admin` → `/dashboard`
@@ -213,13 +214,14 @@ FestivalsPage
 FestivalModal
   ├── Name (required)
   ├── Description (optional)
-  ├── Start Date (required)
-  ├── End Date (required)
-  ├── Collection Deadline (required) ← last date to collect payment
+  ├── Festival Contacts (dynamic name + phone list; one mandatory row, + Add)
+  ├── Agenda (manual day-wise list; Day 1 mandatory, + Add for more days)
+  │     └── Row per day: "Day N" label | Agenda text
+  │     (consolidated for WhatsApp + shown on the viewer's festival page)
+  ├── Payment Start Date (required) ← collection window start (shown to families)
+  ├── Payment Due Date (required)   ← last date to pay (shown to families)
   ├── Fixed Amount per family (required)
   ├── Status: active | closed
-  ├── Day-wise Agenda (auto-generated rows between start & end date)
-  │     └── Row per day: Date (read-only) | Agenda text (editable)
   └── [Cancel] [Save]
 ```
 
@@ -248,7 +250,7 @@ FestivalModal
 FestivalDetailPage
   ├── Festival Info (top, read-only display)
   │     ├── Name, Description, Start–End Date, Deadline, Fixed Amount, Status
-  │     └── Day-wise Agenda table (Date | Agenda)
+  │     └── Day-wise Agenda list (Day N | Agenda)
   └── All Families + Payment Status (below)
         ├── Search / filter (paid | partial | pending)
         ├── FamilyPaymentRow: Family Name | Fixed Amt | Paid | Pending | Mode | Actions

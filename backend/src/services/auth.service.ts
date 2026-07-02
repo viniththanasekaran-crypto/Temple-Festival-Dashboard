@@ -31,10 +31,10 @@ function signAccessToken(
   roleId: number,
   roleName: string,
   permissions: string[],
-  templeId: number | null
+  templeIds: number[]
 ) {
   return jwt.sign(
-    { userId, username, roleId, roleName, permissions, templeId },
+    { userId, username, roleId, roleName, permissions, templeIds },
     process.env.JWT_SECRET!,
     { expiresIn: (process.env.JWT_ACCESS_EXPIRY || '15m') as jwt.SignOptions['expiresIn'] }
   )
@@ -43,7 +43,7 @@ function signAccessToken(
 export async function login(input: LoginInput) {
   const user = await prisma.user.findUnique({
     where: { username: input.username },
-    include: { role: ROLE_INCLUDE },
+    include: { role: ROLE_INCLUDE, temples: { select: { id: true, name: true } } },
   })
 
   if (!user) {
@@ -79,13 +79,14 @@ export async function login(input: LoginInput) {
   })
 
   const permissions = buildPermissions(user.role as RoleWithPermissions)
+  const templeIds = user.temples.map((t) => t.id)
   const accessToken = signAccessToken(
     user.id,
     user.username,
     user.roleId,
     user.role.name,
     permissions,
-    user.templeId
+    templeIds
   )
 
   const rawRefreshToken = crypto.randomBytes(64).toString('hex')
@@ -103,7 +104,8 @@ export async function login(input: LoginInput) {
       id: user.id,
       username: user.username,
       role: user.role.name,
-      templeId: user.templeId,
+      templeIds,
+      temples: user.temples,
     },
   }
 }
@@ -113,7 +115,7 @@ export async function refresh(rawToken: string) {
     where: { expiresAt: { gt: new Date() } },
     include: {
       user: {
-        include: { role: ROLE_INCLUDE },
+        include: { role: ROLE_INCLUDE, temples: { select: { id: true } } },
       },
     },
   })
@@ -129,7 +131,7 @@ export async function refresh(rawToken: string) {
         user.roleId,
         user.role.name,
         permissions,
-        user.templeId
+        user.temples.map((t) => t.id)
       )
       return { accessToken }
     }

@@ -108,7 +108,9 @@ DATABASE_URL="postgresql://temple:temple@localhost:5433/temple_test" npx tsx pri
 ## Architecture
 
 ### Multi-tenancy
-Every resource (festival, family, payment) carries `templeId`. All DB queries **must** filter by `templeId` — never expose cross-temple data. The `templeId` comes from `req.user.templeId` (set by JWT verify middleware).
+Every resource (festival, family, payment) carries `templeId`. All DB queries **must** filter by `templeId` — never expose cross-temple data.
+
+An admin can manage **multiple temples** (many-to-many `User.temples`). The JWT carries `templeIds: number[]` (all temples the user may act on). The client picks the **active temple** via a navbar switcher and sends it as the `X-Temple-Id` header on every request. The `resolveTemple` middleware validates the header is in `req.user.templeIds`, then sets `req.templeId` for handlers. When a user has exactly one temple it is auto-selected (header optional); with multiple temples the header is required (400 if missing, 403 if not a member).
 
 ### Auth Flow
 Two JWT tokens per session, both HTTP-only cookies:
@@ -140,7 +142,7 @@ requirePermission('festivals:create')   // checks req.user.permissions[] — pre
 
 JWT payload shape:
 ```typescript
-{ userId, roleId, roleName, permissions: string[], templeId: number | null }
+{ userId, username, roleId, roleName, permissions: string[], templeIds: number[] }
 ```
 
 To grant/revoke a permission: update `RolePermission` in the DB. The next login/refresh picks up the change automatically.
@@ -164,11 +166,11 @@ All text fields (temple name, family name, address, etc.) fully support Tamil an
 ### Core Data Model (non-obvious relationships)
 - `User.roleId` → FK to `Role` table (not an enum — dynamically configurable)
 - `User.familyId` — only set for `viewer` role, links the user account to their family record
-- `User.templeId` — set for `admin` and `viewer`; `super_admin` has no templeId
+- `User.temples` — many-to-many (`_TempleToUser` join table). An `admin` can be linked to multiple temples; a `viewer` has exactly one; `super_admin` has none. Requests choose the active temple via the `X-Temple-Id` header (see Multi-tenancy)
 - `User.failedAttempts` + `User.lockedUntil` — account lockout (5 attempts → 15 min lock)
 - `Family.children` — stored as JSON array `[{ name: string, age: number }]`
 - `Family.primaryPhone` — stored with country code: `+919876543210`
-- `FestivalAgenda` — auto-generated rows (one per day) when a festival is created
+- `FestivalAgenda` — manual day-wise entries (`order` = Day number, `title` = the day's plan). Entered by the admin (Day 1 mandatory, "+ Add" for more), not derived from dates. Consolidated for WhatsApp and shown on the viewer's festival page. Festival `startDate`/`endDate` are the **payment window** (collection start → due date), independent of the agenda
 - `Payment.type` — `regular` affects pending calculation; `extra` does not
 - `Payment` (online) — auto-populated from Razorpay webhook, NOT editable
 - `Payment` (cash) — admin can edit amount; all edits logged in `PaymentAuditLog`

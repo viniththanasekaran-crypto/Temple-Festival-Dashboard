@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import { loginSchema } from '../schemas/auth.schema'
 import * as authService from '../services/auth.service'
+import prisma from '../lib/prisma'
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -49,11 +50,17 @@ export async function refreshHandler(req: Request, res: Response) {
   res.json({ success: true })
 }
 
-export function meHandler(req: Request, res: Response) {
-  const { userId, username, roleName, templeId } = req.user!
+export async function meHandler(req: Request, res: Response) {
+  const { userId, username, roleName, templeIds } = req.user!
+  const temples = templeIds.length
+    ? await prisma.temple.findMany({
+        where: { id: { in: templeIds } },
+        select: { id: true, name: true },
+      })
+    : []
   res.json({
     success: true,
-    data: { user: { id: userId, username, role: roleName, templeId } },
+    data: { user: { id: userId, username, role: roleName, templeIds, temples } },
   })
 }
 

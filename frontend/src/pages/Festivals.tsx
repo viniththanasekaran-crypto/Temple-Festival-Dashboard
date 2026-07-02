@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Navbar from '../components/Navbar'
 import Modal from '../components/Modal'
+import { useAuth } from '../context/AuthContext'
 import {
   getFestivals,
   getFestival,
@@ -10,6 +11,7 @@ import {
   deleteFestival,
   type Festival,
   type FestivalDetail,
+  type FestivalContact,
   type CreateFestivalPayload,
 } from '../api/festivals'
 import { formatPhone, toE164, fromE164 } from '../utils/phone'
@@ -17,26 +19,45 @@ import styles from './Festivals.module.css'
 
 type ModalMode = 'add' | 'edit' | null
 
+interface ContactRow {
+  name: string
+  phone: string // 10-digit, no +91
+}
+
 interface FormState {
   name: string
   description: string
-  headName: string
-  headPhone: string // 10-digit
-  phone2: string
-  phone3: string
-  startDate: string // YYYY-MM-DD
-  endDate: string
+  contacts: ContactRow[]
+  agenda: string[] // one entry per day (Day 1, Day 2, …), by list position
+  startDate: string // YYYY-MM-DD — payment window start
+  endDate: string // payment due date
   fixedAmount: string
   isActive: boolean
+}
+
+// A festival must always have at least one contact and one agenda day.
+const emptyContacts = (): ContactRow[] => [{ name: '', phone: '' }]
+const emptyAgenda = (): string[] => ['']
+
+function toFormContacts(stored: FestivalContact[]): ContactRow[] {
+  return stored.map((c) => ({ name: c.name, phone: fromE164(c.phone ?? '') }))
+}
+
+function toApiContacts(rows: ContactRow[]): FestivalContact[] {
+  return rows
+    .filter((r) => r.name.trim())
+    .map((r) => ({ name: r.name.trim(), ...(r.phone ? { phone: toE164(r.phone) } : {}) }))
+}
+
+function toApiAgenda(rows: string[]): { title: string }[] {
+  return rows.filter((t) => t.trim()).map((t) => ({ title: t.trim() }))
 }
 
 const EMPTY_FORM: FormState = {
   name: '',
   description: '',
-  headName: '',
-  headPhone: '',
-  phone2: '',
-  phone3: '',
+  contacts: emptyContacts(),
+  agenda: emptyAgenda(),
   startDate: '',
   endDate: '',
   fixedAmount: '',
@@ -78,32 +99,9 @@ function statusLabel(f: Festival) {
   return { text: 'Active', cls: styles.badgeActive }
 }
 
-function PhoneInput({
-  value,
-  onChange,
-  placeholder,
-}: {
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-}) {
-  return (
-    <div className={styles.phoneRow}>
-      <span className={styles.phonePrefix}>+91</span>
-      <input
-        className={styles.phoneInput}
-        value={value}
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 10))}
-        placeholder={placeholder ?? '98765 43210'}
-        maxLength={10}
-        inputMode="numeric"
-      />
-    </div>
-  )
-}
-
 export default function Festivals() {
   const qc = useQueryClient()
+  const { activeTempleId } = useAuth()
   const [modal, setModal] = useState<ModalMode>(null)
   const [selected, setSelected] = useState<Festival | null>(null)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
@@ -112,13 +110,14 @@ export default function Festivals() {
   const [deleteTarget, setDeleteTarget] = useState<Festival | null>(null)
   const [viewId, setViewId] = useState<number | null>(null)
 
+  // Scope queries to the active temple so switching temples refetches.
   const { data: festivals = [], isLoading } = useQuery({
-    queryKey: ['festivals'],
+    queryKey: ['festivals', activeTempleId],
     queryFn: getFestivals,
   })
 
   const { data: detail } = useQuery({
-    queryKey: ['festival', viewId],
+    queryKey: ['festival', activeTempleId, viewId],
     queryFn: () => getFestival(viewId!),
     enabled: viewId !== null,
   })
@@ -165,10 +164,8 @@ export default function Festivals() {
     setForm({
       name: f.name,
       description: f.description ?? '',
-      headName: f.headName ?? '',
-      headPhone: fromE164(f.headPhone ?? ''),
-      phone2: fromE164(f.phone2 ?? ''),
-      phone3: fromE164(f.phone3 ?? ''),
+      contacts: f.contacts.length ? toFormContacts(f.contacts) : emptyContacts(),
+      agenda: f.agenda.length ? f.agenda.map((a) => a.title ?? '') : emptyAgenda(),
       startDate: toDateInput(f.startDate),
       endDate: toDateInput(f.endDate),
       fixedAmount: f.fixedAmount,
@@ -184,6 +181,43 @@ export default function Festivals() {
     setFormError('')
   }
 
+  function addContact() {
+    setForm((f) => ({ ...f, contacts: [...f.contacts, { name: '', phone: '' }] }))
+  }
+
+  function removeContact(i: number) {
+    // Always keep at least one contact row — the first row is mandatory.
+    setForm((f) =>
+      f.contacts.length <= 1 ? f : { ...f, contacts: f.contacts.filter((_, idx) => idx !== i) }
+    )
+  }
+
+  function updateContact(i: number, field: 'name' | 'phone', value: string) {
+    setForm((f) => {
+      const contacts = f.contacts.map((c, idx) =>
+        idx === i
+          ? { ...c, [field]: field === 'phone' ? value.replace(/\D/g, '').slice(0, 10) : value }
+          : c
+      )
+      return { ...f, contacts }
+    })
+  }
+
+  function addAgendaDay() {
+    setForm((f) => ({ ...f, agenda: [...f.agenda, ''] }))
+  }
+
+  function removeAgendaDay(i: number) {
+    // Always keep at least Day 1 — the first agenda row is mandatory.
+    setForm((f) =>
+      f.agenda.length <= 1 ? f : { ...f, agenda: f.agenda.filter((_, idx) => idx !== i) }
+    )
+  }
+
+  function updateAgendaDay(i: number, value: string) {
+    setForm((f) => ({ ...f, agenda: f.agenda.map((a, idx) => (idx === i ? value : a)) }))
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setFormError('')
@@ -195,17 +229,25 @@ export default function Festivals() {
       setFormError('End date must be on or after start date')
       return
     }
+    const contacts = toApiContacts(form.contacts)
+    if (contacts.length === 0) {
+      setFormError('Please add at least one festival contact with a name')
+      return
+    }
+    const agenda = toApiAgenda(form.agenda)
+    if (agenda.length === 0) {
+      setFormError('Please add at least one agenda day (Day 1 is required)')
+      return
+    }
     const payload: CreateFestivalPayload = {
       name: form.name,
       startDate: toIso(form.startDate),
       endDate: toIso(form.endDate),
       fixedAmount: Number(form.fixedAmount),
       isActive: form.isActive,
+      contacts,
+      agenda,
       ...(form.description && { description: form.description }),
-      ...(form.headName && { headName: form.headName }),
-      ...(toE164(form.headPhone) && { headPhone: toE164(form.headPhone) }),
-      ...(toE164(form.phone2) && { phone2: toE164(form.phone2) }),
-      ...(toE164(form.phone3) && { phone3: toE164(form.phone3) }),
     }
     if (modal === 'add') createMutation.mutate(payload)
     else if (selected) updateMutation.mutate({ id: selected.id, payload })
@@ -301,35 +343,81 @@ export default function Festivals() {
               />
             </label>
 
-            <div className={styles.sectionLabel}>Festival Head</div>
-            <label>
-              Head Name
-              <input
-                value={form.headName}
-                onChange={(e) => setForm({ ...form, headName: e.target.value })}
-                placeholder="Organiser / trustee name"
-              />
-            </label>
-            <label>
-              Head Phone
-              <PhoneInput
-                value={form.headPhone}
-                onChange={(v) => setForm({ ...form, headPhone: v })}
-              />
-            </label>
-            <label>
-              Phone 2
-              <PhoneInput value={form.phone2} onChange={(v) => setForm({ ...form, phone2: v })} />
-            </label>
-            <label>
-              Phone 3
-              <PhoneInput value={form.phone3} onChange={(v) => setForm({ ...form, phone3: v })} />
-            </label>
+            <div className={styles.sectionLabel}>
+              Festival Contacts *
+              <button type="button" className={styles.addContactBtn} onClick={addContact}>
+                + Add
+              </button>
+            </div>
+            {form.contacts.map((c, i) => (
+              <div key={i} className={styles.contactRow}>
+                <input
+                  className={styles.contactName}
+                  placeholder="Name"
+                  value={c.name}
+                  onChange={(e) => updateContact(i, 'name', e.target.value)}
+                />
+                <div className={styles.phoneRow}>
+                  <span className={styles.phonePrefix}>+91</span>
+                  <input
+                    className={styles.phoneInput}
+                    placeholder="Phone"
+                    value={c.phone}
+                    maxLength={10}
+                    inputMode="numeric"
+                    onChange={(e) => updateContact(i, 'phone', e.target.value)}
+                  />
+                </div>
+                {form.contacts.length > 1 && (
+                  <button
+                    type="button"
+                    className={styles.removeBtn}
+                    onClick={() => removeContact(i)}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
 
-            <div className={styles.sectionLabel}>Schedule &amp; Amount</div>
+            <div className={styles.sectionLabel}>
+              Agenda *
+              <button type="button" className={styles.addContactBtn} onClick={addAgendaDay}>
+                + Add
+              </button>
+            </div>
+            <p className={styles.sectionHint}>
+              Day-wise plan — sent to families on WhatsApp and shown on their festival page.
+            </p>
+            {form.agenda.map((text, i) => (
+              <div key={i} className={styles.agendaRow}>
+                <span className={styles.agendaDayTag}>Day {i + 1}</span>
+                <input
+                  className={styles.agendaInput}
+                  placeholder="What happens on this day…"
+                  value={text}
+                  onChange={(e) => updateAgendaDay(i, e.target.value)}
+                />
+                {form.agenda.length > 1 && (
+                  <button
+                    type="button"
+                    className={styles.removeBtn}
+                    onClick={() => removeAgendaDay(i)}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+
+            <div className={styles.sectionLabel}>Payment Schedule &amp; Amount</div>
+            <p className={styles.sectionHint}>
+              The payment window families see — collection starts on the start date and is due by
+              the end date.
+            </p>
             <div className={styles.dateRow}>
               <label>
-                Start Date *
+                Payment Start Date *
                 <input
                   type="date"
                   required
@@ -338,7 +426,7 @@ export default function Festivals() {
                 />
               </label>
               <label>
-                End Date *
+                Payment Due Date *
                 <input
                   type="date"
                   required
@@ -388,7 +476,7 @@ export default function Festivals() {
           title={detail?.name ?? '…'}
           onClose={() => {
             setViewId(null)
-            qc.removeQueries({ queryKey: ['festival', viewId] })
+            qc.removeQueries({ queryKey: ['festival'] })
           }}
         >
           {!detail ? (
@@ -402,7 +490,7 @@ export default function Festivals() {
               }}
               onClose={() => {
                 setViewId(null)
-                qc.removeQueries({ queryKey: ['festival', viewId] })
+                qc.removeQueries({ queryKey: ['festival'] })
               }}
             />
           )}
@@ -468,15 +556,19 @@ function DetailView({
         </div>
       )}
 
-      {(festival.headName || festival.headPhone || festival.phone2 || festival.phone3) && (
+      {festival.contacts.length > 0 && (
         <div className={styles.detailSection}>
-          <div className={styles.detailSectionTitle}>Contact</div>
-          {festival.headName && <p className={styles.detailHead}>{festival.headName}</p>}
-          <div className={styles.detailPhones}>
-            {festival.headPhone && <span>{formatPhone(festival.headPhone)}</span>}
-            {festival.phone2 && <span>{formatPhone(festival.phone2)}</span>}
-            {festival.phone3 && <span>{formatPhone(festival.phone3)}</span>}
-          </div>
+          <div className={styles.detailSectionTitle}>Contacts</div>
+          <ul className={styles.detailContacts}>
+            {festival.contacts.map((c, i) => (
+              <li key={i}>
+                <span className={styles.contactPersonName}>{c.name}</span>
+                {c.phone && (
+                  <span className={styles.contactPersonPhone}>{formatPhone(c.phone)}</span>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -486,8 +578,7 @@ function DetailView({
           <ul className={styles.agendaList}>
             {festival.agenda.map((a, i) => (
               <li key={a.id} className={styles.agendaItem}>
-                <span className={styles.agendaDay}>Day {i + 1}</span>
-                <span className={styles.agendaDate}>{formatDate(a.date)}</span>
+                <span className={styles.agendaDay}>Day {a.order || i + 1}</span>
                 {a.title && <span className={styles.agendaTitle}>{a.title}</span>}
               </li>
             ))}

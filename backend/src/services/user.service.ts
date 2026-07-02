@@ -5,7 +5,7 @@ import type { CreateUserInput, UpdateUserInput } from '../schemas/user.schema'
 
 const USER_INCLUDE = {
   role: { select: { name: true } },
-  temple: { select: { id: true, name: true } },
+  temples: { select: { id: true, name: true } },
 } as const
 
 export async function listUsers() {
@@ -27,6 +27,7 @@ export async function createUser(data: CreateUserInput) {
   const plainPassword = generatePassword()
   const hash = await bcrypt.hash(plainPassword, 10)
 
+  const templeIds = data.role === 'admin' ? (data.templeIds ?? []) : []
   const user = await prisma.user.create({
     data: {
       username: data.username,
@@ -34,7 +35,7 @@ export async function createUser(data: CreateUserInput) {
       phone: data.phone,
       password: hash,
       roleId: role.id,
-      templeId: data.templeId ?? null,
+      temples: { connect: templeIds.map((id) => ({ id })) },
     },
     include: USER_INCLUDE,
   })
@@ -49,12 +50,15 @@ export async function updateUser(id: number, data: UpdateUserInput) {
   const updates: Record<string, unknown> = {}
   if (data.name !== undefined) updates.name = data.name
   if (data.phone !== undefined) updates.phone = data.phone
-  if (data.templeId !== undefined) updates.templeId = data.templeId
+  if (data.templeIds !== undefined) {
+    updates.temples = { set: data.templeIds.map((tid) => ({ id: tid })) }
+  }
 
   if (data.role) {
     const role = await prisma.role.findUniqueOrThrow({ where: { name: data.role } })
     updates.roleId = role.id
-    if (data.role === 'super_admin') updates.templeId = null
+    // super_admins are never scoped to a temple
+    if (data.role === 'super_admin') updates.temples = { set: [] }
   }
 
   return prisma.user.update({ where: { id }, data: updates, include: USER_INCLUDE })

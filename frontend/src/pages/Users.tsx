@@ -22,10 +22,10 @@ interface FormState {
   name: string
   phone: string // 10-digit, no +91 prefix
   role: 'super_admin' | 'admin'
-  templeId?: number
+  templeIds: number[] // admins can manage many temples
 }
 
-const EMPTY_FORM: FormState = { username: '', name: '', phone: '', role: 'admin' }
+const EMPTY_FORM: FormState = { username: '', name: '', phone: '', role: 'admin', templeIds: [] }
 
 export default function Users() {
   const qc = useQueryClient()
@@ -84,7 +84,7 @@ export default function Users() {
       name: user.name ?? '',
       phone: fromE164(user.phone ?? ''), // strip +91 for the input
       role: user.role.name as 'super_admin' | 'admin',
-      templeId: user.temple?.id,
+      templeIds: user.temples.map((t) => t.id),
     })
     setFormError('')
     setModal('edit')
@@ -101,6 +101,13 @@ export default function Users() {
     setForm({ ...form, phone: raw.replace(/\D/g, '').slice(0, 10) })
   }
 
+  function toggleTemple(id: number, checked: boolean) {
+    setForm((f) => ({
+      ...f,
+      templeIds: checked ? [...f.templeIds, id] : f.templeIds.filter((t) => t !== id),
+    }))
+  }
+
   function buildPhoneE164(): string | undefined {
     if (!form.phone) return undefined
     const e164 = toE164(form.phone)
@@ -114,8 +121,8 @@ export default function Users() {
       setFormError('Phone must be exactly 10 digits')
       return
     }
-    if (form.role === 'admin' && !form.templeId) {
-      setFormError('Temple is required for admin role')
+    if (form.role === 'admin' && form.templeIds.length === 0) {
+      setFormError('At least one temple is required for admin role')
       return
     }
     const phone = buildPhoneE164()
@@ -125,7 +132,7 @@ export default function Users() {
         role: form.role,
         ...(form.name && { name: form.name }),
         ...(phone && { phone }),
-        ...(form.role === 'admin' && form.templeId ? { templeId: form.templeId } : {}),
+        ...(form.role === 'admin' ? { templeIds: form.templeIds } : {}),
       }
       createMutation.mutate(payload)
     } else if (selected) {
@@ -135,7 +142,7 @@ export default function Users() {
           name: form.name,
           phone,
           role: form.role,
-          templeId: form.role === 'super_admin' ? null : form.templeId,
+          templeIds: form.role === 'super_admin' ? [] : form.templeIds,
         },
       })
     }
@@ -209,7 +216,9 @@ export default function Users() {
                         {user.role.name === 'super_admin' ? 'Super Admin' : 'Admin'}
                       </span>
                     </td>
-                    <td>{user.temple?.name ?? '—'}</td>
+                    <td>
+                      {user.temples.length ? user.temples.map((t) => t.name).join(', ') : '—'}
+                    </td>
                     <td>{user.phone ? formatPhone(user.phone) : '—'}</td>
                     <td>
                       <span className={user.isActive ? styles.active : styles.inactive}>
@@ -284,7 +293,7 @@ export default function Users() {
                   setForm({
                     ...form,
                     role: e.target.value as 'super_admin' | 'admin',
-                    templeId: undefined,
+                    templeIds: [],
                   })
                 }
               >
@@ -293,23 +302,24 @@ export default function Users() {
               </select>
             </label>
             {form.role === 'admin' && (
-              <label>
-                Temple *
-                <select
-                  required
-                  value={form.templeId ?? ''}
-                  onChange={(e) =>
-                    setForm({ ...form, templeId: Number(e.target.value) || undefined })
-                  }
-                >
-                  <option value="">Select temple…</option>
+              <div className={styles.templesField}>
+                <span className={styles.templesLabel}>Temples *</span>
+                <div className={styles.templeChecklist}>
                   {temples.map((t) => (
-                    <option key={t.id} value={t.id}>
+                    <label key={t.id} className={styles.templeCheck}>
+                      <input
+                        type="checkbox"
+                        checked={form.templeIds.includes(t.id)}
+                        onChange={(e) => toggleTemple(t.id, e.target.checked)}
+                      />
                       {t.name}
-                    </option>
+                    </label>
                   ))}
-                </select>
-              </label>
+                  {temples.length === 0 && (
+                    <p className={styles.hint}>No temples yet — create one first.</p>
+                  )}
+                </div>
+              </div>
             )}
             {formError && <p className={styles.error}>{formError}</p>}
             <div className={styles.formActions}>

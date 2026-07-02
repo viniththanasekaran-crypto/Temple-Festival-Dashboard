@@ -7,7 +7,7 @@ export interface AdminUser {
   phone: string | null
   isActive: boolean
   role: { name: string }
-  temple: { id: number; name: string } | null
+  temples: { id: number; name: string }[]
   createdAt: string
 }
 
@@ -16,14 +16,14 @@ export interface CreateUserPayload {
   name?: string
   phone?: string
   role: 'super_admin' | 'admin'
-  templeId?: number
+  templeIds?: number[]
 }
 
 export interface UpdateUserPayload {
   name?: string
   phone?: string
   role?: 'super_admin' | 'admin'
-  templeId?: number | null
+  templeIds?: number[]
 }
 
 export async function getUsers(): Promise<AdminUser[]> {

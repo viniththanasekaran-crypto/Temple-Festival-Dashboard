@@ -29,7 +29,7 @@ beforeAll(async () => {
       roleId: superAdminRole.id,
       roleName: 'super_admin',
       permissions: ['temples:create', 'temples:read', 'temples:update', 'temples:delete'],
-      templeId: null,
+      templeIds: [],
     },
     process.env.JWT_SECRET!,
     { expiresIn: '15m' }
@@ -108,7 +108,7 @@ describe('Temple CRUD', () => {
         roleId: adminRole.id,
         roleName: 'admin',
         permissions: [],
-        templeId: 1,
+        templeIds: [1],
       },
       process.env.JWT_SECRET!,
       { expiresIn: '15m' }

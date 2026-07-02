@@ -33,7 +33,7 @@ beforeAll(async () => {
       roleId: superAdminRole.id,
       roleName: 'super_admin',
       permissions: ['users:create', 'users:read', 'users:update', 'users:deactivate'],
-      templeId: null,
+      templeIds: [],
     },
     process.env.JWT_SECRET!,
     { expiresIn: '15m' }
@@ -54,12 +54,17 @@ describe('User management', () => {
     const res = await request(app)
       .post('/api/v1/users')
       .set('Cookie', `access_token=${superAdminToken}`)
-      .send({ username: 'new_admin_user', name: 'Test Admin', role: 'admin', templeId })
+      .send({
+        username: 'new_admin_user',
+        name: 'Test Admin',
+        role: 'admin',
+        templeIds: [templeId],
+      })
 
     expect(res.status).toBe(201)
     expect(res.body.success).toBe(true)
     expect(res.body.data.user.role.name).toBe('admin')
-    expect(res.body.data.user.temple.id).toBe(templeId)
+    expect(res.body.data.user.temples.map((t: { id: number }) => t.id)).toEqual([templeId])
     expect(typeof res.body.data.password).toBe('string')
     expect(res.body.data.password.length).toBeGreaterThanOrEqual(12)
     createdUserId = res.body.data.user.id
@@ -73,7 +78,7 @@ describe('User management', () => {
 
     expect(res.status).toBe(201)
     expect(res.body.data.user.role.name).toBe('super_admin')
-    expect(res.body.data.user.temple).toBeNull()
+    expect(res.body.data.user.temples).toEqual([])
 
     await prisma.user.deleteMany({ where: { username: 'new_sa_temp' } })
   })
@@ -91,7 +96,7 @@ describe('User management', () => {
     const res = await request(app)
       .post('/api/v1/users')
       .set('Cookie', `access_token=${superAdminToken}`)
-      .send({ username: 'new_admin_user', role: 'admin', templeId })
+      .send({ username: 'new_admin_user', role: 'admin', templeIds: [templeId] })
 
     expect(res.status).toBe(409)
   })

@@ -1,6 +1,5 @@
 import { Router } from 'express'
-import type { Request, Response, NextFunction } from 'express'
-import { authenticate, requirePermission } from '../middleware/auth.middleware'
+import { authenticate, requirePermission, resolveTemple } from '../middleware/auth.middleware'
 import {
   listFestivalsHandler,
   getFestivalHandler,
@@ -11,16 +10,8 @@ import {
 
 const router = Router()
 
-router.use(authenticate)
-
-// Reject users without a temple assignment (super_admin has templeId = null)
-router.use((req: Request, res: Response, next: NextFunction) => {
-  if (!req.user?.templeId) {
-    res.status(403).json({ success: false, message: 'No temple assigned to this account' })
-    return
-  }
-  next()
-})
+// Resolve the active temple (from the X-Temple-Id header) and verify membership.
+router.use(authenticate, resolveTemple)
 
 router.get('/', requirePermission('festivals:read'), listFestivalsHandler)
 router.post('/', requirePermission('festivals:create'), createFestivalHandler)

@@ -43,8 +43,8 @@ model Role {
 
 model Permission {
   id          Int              @id @default(autoincrement())
-  resource    String           // e.g. "festivals", "families"
-  action      String           // e.g. "create", "read", "update", "delete"
+  resource    String // e.g. "festivals", "families"
+  action      String // e.g. "create", "read", "update", "delete"
   description String?
   roles       RolePermission[]
 
@@ -78,7 +78,7 @@ model Temple {
   phone      String?
   phone2     String?
   phone3     String?
-  contacts   Json     @default("[]") // [{ name, phone }]
+  contacts   Json            @default("[]") // [{ name, phone }]
   districtId Int
   district   District        @relation(fields: [districtId], references: [id])
   gallery    TempleGallery[]
@@ -109,8 +109,7 @@ model User {
   isActive       Boolean           @default(true)
   roleId         Int
   role           Role              @relation(fields: [roleId], references: [id])
-  templeId       Int?
-  temple         Temple?           @relation(fields: [templeId], references: [id])
+  temples        Temple[] // admins can manage many temples (m-n); viewers have exactly one
   familyId       Int?              @unique
   family         Family?           @relation(fields: [familyId], references: [id])
   failedAttempts Int               @default(0)
@@ -132,30 +131,32 @@ model RefreshToken {
 }
 
 model Festival {
-  id            Int              @id @default(autoincrement())
-  templeId      Int
-  temple        Temple           @relation(fields: [templeId], references: [id])
-  name          String
-  description   String?
-  headName      String?
-  headPhone     String?          // primary contact (+91XXXXXXXXXX)
-  phone2        String?          // optional second contact
-  phone3        String?          // optional third contact
-  startDate     DateTime
-  endDate       DateTime
-  fixedAmount   Decimal          @db.Decimal(10, 2)
-  isActive      Boolean          @default(true)
-  agenda        FestivalAgenda[]
-  payments      Payment[]
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id          Int              @id @default(autoincrement())
+  templeId    Int
+  temple      Temple           @relation(fields: [templeId], references: [id])
+  name        String
+  description String?
+  headName    String? // legacy — superseded by contacts
+  headPhone   String? // legacy — superseded by contacts
+  phone2      String? // legacy — superseded by contacts
+  phone3      String? // legacy — superseded by contacts
+  contacts    Json             @default("[]") // [{ name, phone }]
+  startDate   DateTime
+  endDate     DateTime
+  fixedAmount Decimal          @db.Decimal(10, 2)
+  isActive    Boolean          @default(true)
+  agenda      FestivalAgenda[]
+  payments    Payment[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
 model FestivalAgenda {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   festivalId  Int
-  festival    Festival @relation(fields: [festivalId], references: [id], onDelete: Cascade)
-  date        DateTime @db.Date
+  festival    Festival  @relation(fields: [festivalId], references: [id], onDelete: Cascade)
+  order       Int       @default(0) // day number (1-based), set from list position
+  date        DateTime? @db.Date // optional — agenda is day-numbered, not date-bound
   title       String?
   description String?
 }

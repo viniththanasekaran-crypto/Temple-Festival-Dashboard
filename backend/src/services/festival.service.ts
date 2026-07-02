@@ -5,23 +5,22 @@ const FESTIVAL_INCLUDE = {
   _count: { select: { payments: true } },
 } as const
 
-function buildAgendaRows(festivalId: number, startDate: Date, endDate: Date) {
-  const rows: { festivalId: number; date: Date }[] = []
-  const cur = new Date(startDate)
-  cur.setUTCHours(0, 0, 0, 0)
-  const end = new Date(endDate)
-  end.setUTCHours(0, 0, 0, 0)
-  while (cur <= end && rows.length <= 365) {
-    rows.push({ festivalId, date: new Date(cur) })
-    cur.setUTCDate(cur.getUTCDate() + 1)
-  }
-  return rows
+type AgendaItem = { title: string; description?: string }
+
+// Manual day-wise agenda rows — order follows the list position (Day 1, Day 2, …).
+function agendaRows(festivalId: number, agenda: AgendaItem[]) {
+  return agenda.map((a, i) => ({
+    festivalId,
+    order: i + 1,
+    title: a.title,
+    description: a.description ?? null,
+  }))
 }
 
 export async function listFestivals(templeId: number) {
   return prisma.festival.findMany({
     where: { templeId },
-    include: FESTIVAL_INCLUDE,
+    include: { ...FESTIVAL_INCLUDE, agenda: { orderBy: { order: 'asc' } } },
     orderBy: { startDate: 'desc' },
   })
 }
@@ -29,7 +28,7 @@ export async function listFestivals(templeId: number) {
 export async function getFestival(templeId: number, id: number) {
   const festival = await prisma.festival.findFirst({
     where: { id, templeId },
-    include: { ...FESTIVAL_INCLUDE, agenda: { orderBy: { date: 'asc' } } },
+    include: { ...FESTIVAL_INCLUDE, agenda: { orderBy: { order: 'asc' } } },
   })
   if (!festival) {
     const err = new Error('Festival not found')
@@ -49,6 +48,7 @@ export async function createFestival(templeId: number, data: CreateFestivalInput
       headPhone: data.headPhone,
       phone2: data.phone2,
       phone3: data.phone3,
+      contacts: data.contacts ?? [],
       startDate: new Date(data.startDate),
       endDate: new Date(data.endDate),
       fixedAmount: data.fixedAmount,
@@ -56,8 +56,9 @@ export async function createFestival(templeId: number, data: CreateFestivalInput
     },
     include: FESTIVAL_INCLUDE,
   })
-  const rows = buildAgendaRows(festival.id, new Date(data.startDate), new Date(data.endDate))
-  if (rows.length > 0) await prisma.festivalAgenda.createMany({ data: rows })
+  if (data.agenda?.length) {
+    await prisma.festivalAgenda.createMany({ data: agendaRows(festival.id, data.agenda) })
+  }
   return festival
 }
 
@@ -68,7 +69,7 @@ export async function updateFestival(templeId: number, id: number, data: UpdateF
     ;(err as NodeJS.ErrnoException).code = 'NOT_FOUND'
     throw err
   }
-  const { startDate, endDate, fixedAmount, ...rest } = data
+  const { startDate, endDate, fixedAmount, agenda, ...rest } = data
   const updated = await prisma.festival.update({
     where: { id },
     data: {
@@ -79,12 +80,12 @@ export async function updateFestival(templeId: number, id: number, data: UpdateF
     },
     include: FESTIVAL_INCLUDE,
   })
-  if (startDate !== undefined || endDate !== undefined) {
+  // Agenda is edited as a whole list — replace it when provided.
+  if (agenda !== undefined) {
     await prisma.festivalAgenda.deleteMany({ where: { festivalId: id } })
-    const s = new Date(startDate ?? existing.startDate)
-    const e = new Date(endDate ?? existing.endDate)
-    const rows = buildAgendaRows(id, s, e)
-    if (rows.length > 0) await prisma.festivalAgenda.createMany({ data: rows })
+    if (agenda.length > 0) {
+      await prisma.festivalAgenda.createMany({ data: agendaRows(id, agenda) })
+    }
   }
   return updated
 }

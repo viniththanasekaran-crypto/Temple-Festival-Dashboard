@@ -16,13 +16,26 @@ vi.mock('../api/temples', () => ({
 
 import * as templesApi from '../api/temples'
 
-const SUPER_ADMIN = { id: 1, username: 'superadmin', role: 'super_admin' as const, templeId: null }
+const SUPER_ADMIN = {
+  id: 1,
+  username: 'superadmin',
+  role: 'super_admin' as const,
+  templeIds: [],
+  temples: [],
+}
 
 function renderTemples() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <AuthContext.Provider
-      value={{ user: SUPER_ADMIN, loading: false, setUser: vi.fn(), logout: vi.fn() }}
+      value={{
+        user: SUPER_ADMIN,
+        loading: false,
+        activeTempleId: null,
+        setUser: vi.fn(),
+        setActiveTempleId: vi.fn(),
+        logout: vi.fn(),
+      }}
     >
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>

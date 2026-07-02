@@ -129,7 +129,7 @@
 
   LOGIN (Username + Password)
   POST /auth/login → bcrypt compare → build permissions[] from Role → Permission DB tables
-       → sign JWT with { userId, roleId, roleName, permissions[], templeId }
+       → sign JWT with { userId, roleId, roleName, permissions[], templeIds[] }
        → store bcrypt(refresh_token) in RefreshToken DB table
        → set both as HTTP-only cookies → redirect based on roleName
 

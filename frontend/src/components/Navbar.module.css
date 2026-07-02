@@ -51,6 +51,34 @@
   margin-left: auto;
 }
 
+.templeSelect {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #1a1523;
+  background: #fff;
+  max-width: 180px;
+  cursor: pointer;
+}
+
+.templeSelect:focus {
+  outline: none;
+  border-color: #7c3aed;
+}
+
+.templeBadge {
+  font-size: 0.8rem;
+  color: #6b6375;
+  background: #f5f4f7;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .username {
   font-size: 0.875rem;
   font-weight: 600;

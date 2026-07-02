@@ -3,7 +3,7 @@ import { createFestivalSchema, updateFestivalSchema } from '../schemas/festival.
 import * as festivalService from '../services/festival.service'
 
 function templeId(req: Request): number {
-  return req.user!.templeId!
+  return req.templeId!
 }
 
 export async function listFestivalsHandler(req: Request, res: Response) {
