@@ -52,7 +52,11 @@ function toDateInput(iso: string) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
 function formatDateRange(start: string, end: string) {
@@ -74,7 +78,15 @@ function statusLabel(f: Festival) {
   return { text: 'Active', cls: styles.badgeActive }
 }
 
-function PhoneInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+function PhoneInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+}) {
   return (
     <div className={styles.phoneRow}>
       <span className={styles.phonePrefix}>+91</span>
@@ -113,7 +125,10 @@ export default function Festivals() {
 
   const createMutation = useMutation({
     mutationFn: createFestival,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['festivals'] }); closeModal() },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['festivals'] })
+      closeModal()
+    },
     onError: (e: { response?: { data?: { message?: string } } }) =>
       setFormError(e.response?.data?.message ?? 'Failed to create festival'),
   })
@@ -121,14 +136,20 @@ export default function Festivals() {
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Partial<CreateFestivalPayload> }) =>
       updateFestival(id, payload),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['festivals'] }); closeModal() },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['festivals'] })
+      closeModal()
+    },
     onError: (e: { response?: { data?: { message?: string } } }) =>
       setFormError(e.response?.data?.message ?? 'Failed to update festival'),
   })
 
   const deleteMutation = useMutation({
     mutationFn: deleteFestival,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['festivals'] }); setDeleteTarget(null) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['festivals'] })
+      setDeleteTarget(null)
+    },
     onError: (e: { response?: { data?: { message?: string } } }) =>
       alert(e.response?.data?.message ?? 'Failed to delete festival'),
   })
@@ -190,9 +211,10 @@ export default function Festivals() {
     else if (selected) updateMutation.mutate({ id: selected.id, payload })
   }
 
-  const filtered = festivals.filter((f) =>
-    f.name.toLowerCase().includes(search.toLowerCase()) ||
-    (f.headName ?? '').toLowerCase().includes(search.toLowerCase())
+  const filtered = festivals.filter(
+    (f) =>
+      f.name.toLowerCase().includes(search.toLowerCase()) ||
+      (f.headName ?? '').toLowerCase().includes(search.toLowerCase())
   )
 
   const isPending = createMutation.isPending || updateMutation.isPending
@@ -290,7 +312,10 @@ export default function Festivals() {
             </label>
             <label>
               Head Phone
-              <PhoneInput value={form.headPhone} onChange={(v) => setForm({ ...form, headPhone: v })} />
+              <PhoneInput
+                value={form.headPhone}
+                onChange={(v) => setForm({ ...form, headPhone: v })}
+              />
             </label>
             <label>
               Phone 2
@@ -361,7 +386,10 @@ export default function Festivals() {
       {viewId !== null && (
         <Modal
           title={detail?.name ?? '…'}
-          onClose={() => { setViewId(null); qc.removeQueries({ queryKey: ['festival', viewId] }) }}
+          onClose={() => {
+            setViewId(null)
+            qc.removeQueries({ queryKey: ['festival', viewId] })
+          }}
         >
           {!detail ? (
             <p className={styles.hint}>Loading…</p>
@@ -372,7 +400,10 @@ export default function Festivals() {
                 setViewId(null)
                 openEdit(detail)
               }}
-              onClose={() => { setViewId(null); qc.removeQueries({ queryKey: ['festival', viewId] }) }}
+              onClose={() => {
+                setViewId(null)
+                qc.removeQueries({ queryKey: ['festival', viewId] })
+              }}
             />
           )}
         </Modal>
@@ -382,7 +413,8 @@ export default function Festivals() {
       {deleteTarget && (
         <Modal title="Delete Festival" onClose={() => setDeleteTarget(null)}>
           <p>
-            Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This cannot be undone.
+            Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This cannot be
+            undone.
           </p>
           {deleteTarget._count.payments > 0 && (
             <p className={styles.error}>
@@ -421,8 +453,12 @@ function DetailView({
     <div className={styles.detail}>
       <div className={styles.detailMeta}>
         <span className={`${styles.badge} ${status.cls}`}>{status.text}</span>
-        <span className={styles.detailDates}>{formatDateRange(festival.startDate, festival.endDate)}</span>
-        <span className={styles.detailAmount}>₹{Number(festival.fixedAmount).toLocaleString('en-IN')} / family</span>
+        <span className={styles.detailDates}>
+          {formatDateRange(festival.startDate, festival.endDate)}
+        </span>
+        <span className={styles.detailAmount}>
+          ₹{Number(festival.fixedAmount).toLocaleString('en-IN')} / family
+        </span>
       </div>
 
       {festival.description && (
