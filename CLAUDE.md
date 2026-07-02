@@ -240,7 +240,7 @@ cd frontend && npm test
 ## Git
 
 ```
-local → dev → uat → staging → prod
+local → dev → uat → staging → production
 ```
 
 Pre-push hook (Husky at repo root) blocks push if ESLint, Prettier, or backend tests fail.

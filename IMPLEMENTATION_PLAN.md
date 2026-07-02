@@ -63,7 +63,7 @@ backend/
 - [ ] Setup ESLint + Prettier (frontend + backend)
 - [ ] Setup Husky pre-push hook (lint + format + test)
 - [ ] Initialize GitHub repository
-- [ ] Create branches: `dev`, `uat`, `staging`, `prod`
+- [ ] Create branches: `dev`, `uat`, `staging`, `production`
 - [ ] Setup GitHub Actions workflows:
   - `ci.yml` — lint + format + test on every push
   - `deploy-dev.yml` — auto deploy on merge to dev
@@ -73,7 +73,7 @@ backend/
   - `dev` → CI must pass
   - `uat` → CI pass + 1 reviewer
   - `staging` → CI pass + 1 reviewer
-  - `prod` → CI pass + manual approval
+  - `production` → CI pass + manual approval
 - [ ] Verify both dev servers start without errors
 
 ### Deliverable
@@ -593,7 +593,7 @@ Temple profile fully functional with cover + gallery images. All tests passing.
 - [ ] Toast notifications (success/error on all actions)
 - [ ] Confirm dialogs for all destructive actions (delete, deactivate)
 - [ ] Session expiry handling — refresh token auto-renews, expired session → redirect to login
-- [ ] `.env` files per environment (dev, uat, staging, prod)
+- [ ] `.env` files per environment (dev, uat, staging, production)
 - [ ] `.env.example` committed (no real values)
 - [ ] Production build test (frontend + backend)
 
@@ -657,7 +657,7 @@ App is fully observable, data is backed up, legal requirements met. Production-r
 
 ### Branch Flow
 ```
-local → dev → uat → staging → prod
+local → dev → uat → staging → production
 ```
 
 | Branch | Deploy | Gate |
@@ -665,7 +665,7 @@ local → dev → uat → staging → prod
 | `dev` | Dev environment (auto) | CI must pass |
 | `uat` | UAT environment (auto) | CI + 1 reviewer |
 | `staging` | Staging environment (auto) | CI + 1 reviewer |
-| `prod` | Production (manual approval) | CI + manual approval |
+| `production` | Production (manual approval) | CI + manual approval |
 
 ### Commit Convention
 ```
